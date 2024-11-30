@@ -34,6 +34,17 @@ export default function DiscoverScreen() {
   }, [auth?.session, storage?.interests, auth?.interests]);
 
   const cosineSimilarity = (vectorA: number[], vectorB: number[]): number => {
+    /**
+     * Calculates the cosine similarity between two vectors.
+     *
+     * Cosine similarity is a measure of similarity between two non-zero vectors
+     * based on the cosine of the angle between them. It ranges from -1 to 1,
+     * where 1 indicates identical vectors and -1 indicates opposite vectors.
+     *
+     * @param vectorA - The first vector of numbers
+     * @param vectorB - The second vector of numbers
+     * @returns The cosine similarity between the two vectors (a value between -1 and 1)
+     */
     const dotProduct = vectorA.reduce(
       (sum, value, index) => sum + value * vectorB[index],
       0
@@ -48,6 +59,20 @@ export default function DiscoverScreen() {
   };
 
   const calculateUsersSimilarities = (users: User[]): User[] => {
+    /**
+     * Calculates and ranks users by their similarity to the authenticated user
+     * based on shared interests.
+     *
+     * This function does the following:
+     * 1. Creates a sorted array of interests based on a global interests registry
+     * 2. Generates an interest vector for the authenticated user
+     * 3. Compares the authenticated user's interest vector with each other user's
+     * 4. Calculates cosine similarity for each user
+     * 5. Sorts users by their similarity in descending order
+     *
+     * @param users - An array of users to compare
+     * @returns An array of users sorted by similarity to the authenticated user
+     */
     if (!storage?.interests || !auth?.interests) return [];
 
     const global_interests = Object.keys(storage.interests).sort();
