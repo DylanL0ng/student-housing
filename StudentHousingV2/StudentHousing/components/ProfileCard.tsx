@@ -2,14 +2,8 @@ import { Entypo, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useContext, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
-type ProfileData = {
-  date_of_birth: string;
-  full_name: string;
-  id: string;
-  location: string;
-  interests: string[]; // Interests should be an array of interest IDs
-};
+import ImageCollection from "./Profile/ImageCollection";
+import { Profile } from "@/typings";
 
 const calculateAge = (timestamptz: string) => {
   const birthDate = new Date(timestamptz);
@@ -30,33 +24,21 @@ const calculateAge = (timestamptz: string) => {
   return age;
 };
 
-const ProfileCard = ({
-  date_of_birth,
-  full_name,
-  id,
-  location,
-  interests,
-}: ProfileData) => {
-  const [age, setAge] = useState(calculateAge(date_of_birth));
-
+const ProfileCard = ({ profile }: { profile: Profile }) => {
+  // const [age, setAge] = useState(calculateAge(profile?.date_of_birth));
   return (
     <View style={styles.body}>
       <View style={styles.float}>
-        <Image
-          source={{
-            uri: "https://media.istockphoto.com/id/1384892916/photo/young-teenager-taking-a-selfie-with-smartphone-in-a-city-park.jpg?s=2048x2048&w=is&k=20&c=kMTTX7I6CcKVpre2UQXojPVM9_CUja__m6wW3piFq0s=",
-          }}
-          style={styles.float}
-        ></Image>
+        <ImageCollection media={profile.media} />
         <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.9)"]}
-          locations={[0.3, 1.0]}
-          style={styles.float}
+          colors={["transparent", "rgba(0,0,0,1)"]}
+          locations={[0.3, 0.75]}
+          style={{ ...styles.float, pointerEvents: "none" }}
         />
       </View>
       <View style={{ ...styles.personalInfoWrapper }}>
         <Text style={styles.personalInfoGreeting}>
-          {full_name}, {age}
+          {profile.title}, {0}
         </Text>
         <View
           style={{
@@ -80,7 +62,7 @@ const ProfileCard = ({
           </View>
         </View>
         <View style={{ display: "flex", flexDirection: "row", gap: 8 }}>
-          {interests?.map((interest, index) => (
+          {profile.interests?.map((interest, index) => (
             <View key={index} style={styles.personalInfoInterestsWrapper}>
               <Text style={styles.personalInfoInterestsText}>{interest}</Text>
             </View>

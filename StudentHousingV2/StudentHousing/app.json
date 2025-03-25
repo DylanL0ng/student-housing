@@ -15,7 +15,9 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.C21331063.StudentHousing",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
@@ -24,6 +26,8 @@
     },
     "plugins": [
       "expo-router",
+      "@react-native-google-signin/google-signin",
+      "expo-secure-store",
       [
         "expo-splash-screen",
         {
@@ -36,6 +40,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "62ded33b-f5b5-43b1-a4af-b92386105dc7"
+      }
+    },
+    "owner": "opod"
   }
 }

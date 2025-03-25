@@ -1,97 +1,40 @@
 import { Image, StyleSheet, Platform } from "react-native";
-import { HelloWave } from "@/components/HelloWave";
-import ParallaxScrollView from "@/components/ParallaxScrollView";
-import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
 import ProfileCard from "@/components/ProfileCard";
 import SwipeHandler from "@/components/SwipeHandler";
 import { useState } from "react";
-
-interface User {
-  id: string;
-  full_name: string;
-  date_of_birth: string;
-  location: string;
-  interests: string[];
-}
-
-const initialUsers: User[] = [
-  {
-    id: "1",
-    full_name: "Alice",
-    date_of_birth: "1982/31/08",
-    location: "Dublin",
-    interests: ["music", "sports", "art"],
-  },
-  {
-    id: "2",
-    full_name: "Bob",
-    date_of_birth: "1982/31/08",
-    location: "Dublin",
-    interests: ["music", "sports", "art"],
-  },
-  {
-    id: "3",
-    full_name: "Charlie",
-    date_of_birth: "1982/31/08",
-    location: "Dublin",
-    interests: ["music", "sports", "art"],
-  },
-];
+import Header from "@/components/Header";
+import { User } from "@/typings";
+import { Users } from "@/constants/Users";
 
 const requestUpdate = async (): Promise<User[]> => {
   return new Promise((resolve) => {
-    const newUsers = [
-      {
-        id: "4",
-        full_name: "Dylan",
-        date_of_birth: "1982/31/08",
-        location: "Dublin",
-        interests: ["music", "sports", "art"],
-      },
-      {
-        id: "5",
-        full_name: "Eve",
-        date_of_birth: "1982/31/08",
-        location: "Dublin",
-        interests: ["music", "sports", "art"],
-      },
-      {
-        id: "6",
-        full_name: "Frank",
-        date_of_birth: "1982/31/08",
-        location: "Dublin",
-        interests: ["music", "sports", "art"],
-      },
-    ];
-    resolve(newUsers);
+    const users = Array.from(Object.values(Users));
+    resolve(users.splice(3, users.length));
   });
 };
 
 export default function HomeScreen() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>(
+    Array.from(Object.values(Users)).splice(0, 3)
+  );
 
   const handleRequestUpdate = async () => {
     const newUsers = await requestUpdate();
     return newUsers;
   };
 
-  const handleSwipeRight = () => {
-    console.log("Swiped right");
-  };
+  const handleSwipeRight = () => {};
 
-  const handleSwipeLeft = () => {
-    console.log("Swiped left");
-  };
+  const handleSwipeLeft = () => {};
 
   return (
     <SwipeHandler
       onSwipeLeft={handleSwipeLeft}
       onSwipeRight={handleSwipeRight}
       requestUpdate={handleRequestUpdate}
-      data={users} // Pass the users state as data
+      data={users.map((user) => ({ profile: user.profile }))} // Map users to objects with profile property
       Card={ProfileCard}
-      style={{ marginTop: 32, margin: 16 }}
+      style={{ marginTop: 16, margin: 16 }}
     />
   );
 }
