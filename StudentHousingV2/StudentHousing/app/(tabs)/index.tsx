@@ -5,6 +5,7 @@ import { useState } from "react";
 import Header from "@/components/Header";
 import { User } from "@/typings";
 import { Users } from "@/constants/Users";
+import supabase from "../lib/supabase";
 
 const requestUpdate = async (): Promise<User[]> => {
   return new Promise((resolve) => {

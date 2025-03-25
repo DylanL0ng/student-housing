@@ -8,12 +8,13 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import "react-native-reanimated";
+// import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 import Header from "@/components/Header";
 import { Text } from "react-native";
 import { AuthProvider } from "@/components/AuthProvider";
+import supabase from "./lib/supabase";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -36,30 +37,28 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <Stack
-          screenOptions={{
-            header: ({ route, options }) => {
-              return <Header page={options.title || route.name} />;
-            },
+      <Stack
+        screenOptions={{
+          header: ({ route, options }) => {
+            return <Header page={options.title || route.name} />;
+          },
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
+        <Stack.Screen name="+not-found" />
+        <Stack.Screen
+          name="message_thread"
+          options={{
+            presentation: "modal",
           }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
-          <Stack.Screen name="+not-found" />
-          <Stack.Screen
-            name="message_thread"
-            options={{
-              presentation: "modal",
-            }}
-          />
-          <Stack.Screen
-            name="profile"
-            options={{
-              presentation: "modal",
-            }}
-          />
-        </Stack>
-      </AuthProvider>
+        />
+        <Stack.Screen
+          name="profile"
+          options={{
+            presentation: "modal",
+          }}
+        />
+      </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
   );

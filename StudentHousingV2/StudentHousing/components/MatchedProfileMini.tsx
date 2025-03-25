@@ -1,4 +1,4 @@
-// import { Conversations } from "@/constants/Users";
+// cimport { Conversations } from "@/constants/Users";
 import { User } from "@/typings";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, useNavigation, useRouter } from "expo-router";

@@ -12,7 +12,7 @@ import {
 
 import { useLocalSearchParams } from "expo-router";
 import { User, TextMessageProps, Conversation } from "@/typings";
-import Animated from "react-native-reanimated";
+// import Animated from "react-native-reanimated";
 import { Conversations } from "@/constants/Users";
 // // import { supabase } from "@/lib/supabase";
 // import UUID from "react-native-uuid";
@@ -133,12 +133,9 @@ const MessageThread = () => {
       <View style={{ flex: 1, paddingHorizontal: 8, gap: 4 }}>
         {messageHistory &&
           messageHistory.map((message, index) => (
-            <Animated.View
-              key={index}
-              style={{ position: "relative", width: "100%" }}
-            >
+            <View key={index} style={{ position: "relative", width: "100%" }}>
               <TextMessage content={message.content} sender={message.sender} />
-            </Animated.View>
+            </View>
           ))}
       </View>
       <View style={styles.inputContainer}>
