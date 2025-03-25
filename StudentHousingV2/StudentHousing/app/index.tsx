@@ -1,16 +1,24 @@
-import { Redirect } from "expo-router";
+import { Redirect, router } from "expo-router";
 import React, { useEffect } from "react";
 import supabase from "./lib/supabase";
 
 const Index = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Session got", session);
       if (session) {
-        return <Redirect href={"/(tabs)"} />;
+        return router.replace("/auth/creation");
       }
     });
-  });
-  return <Redirect href={"/(auth)/login"} />;
+
+    supabase.auth.onAuthStateChange((_, session) => {
+      if (!session) {
+        return router.replace("/auth/login");
+      }
+    });
+  }, []);
+
+  return <Redirect href={"/auth/login"} />;
 };
 
 export default Index;

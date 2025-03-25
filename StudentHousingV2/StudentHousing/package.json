@@ -20,6 +20,7 @@
     "@react-native-google-signin/google-signin": "^13.2.0",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
+    "@rneui/base": "^4.0.0-rc.8",
     "@rneui/themed": "^4.0.0-rc.8",
     "@supabase/supabase-js": "^2.49.3",
     "expo": "^52.0.40",
@@ -45,7 +46,8 @@
     "react-native-safe-area-context": "~5.1.0",
     "react-native-screens": "~4.8.0",
     "react-native-url-polyfill": "^2.0.0",
-    "react-native-web": "~0.19.13",
+    "react-native-vector-icons": "^10.2.0",
+    "react-native-web": "^0.19.13",
     "react-native-webview": "~13.13.1"
   },
   "devDependencies": {

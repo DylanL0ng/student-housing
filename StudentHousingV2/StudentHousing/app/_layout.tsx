@@ -45,19 +45,8 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
+        <Stack.Screen name="(modals)" options={{ presentation: "modal" }} />
         <Stack.Screen name="+not-found" />
-        <Stack.Screen
-          name="message_thread"
-          options={{
-            presentation: "modal",
-          }}
-        />
-        <Stack.Screen
-          name="profile"
-          options={{
-            presentation: "modal",
-          }}
-        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

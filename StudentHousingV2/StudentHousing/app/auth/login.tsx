@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import supabase from "../lib/supabase";
 import {
@@ -13,12 +13,11 @@ import {
 const signIn = async () => {
   try {
     await GoogleSignin.hasPlayServices();
-    console.log("has play services");
     const response = await GoogleSignin.signIn();
-    console.log(response);
     if (isSuccessResponse(response)) {
       // read user's info
       if (response.data.idToken) {
+        // console.log(response.data.idToken);
         const { data, error } = await supabase.auth.signInWithIdToken({
           provider: "google",
           token: response.data.idToken,
@@ -56,7 +55,9 @@ const signIn = async () => {
 const Login = () => {
   GoogleSignin.configure({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID!,
+    offlineAccess: true,
   });
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Student Housing</Text>
