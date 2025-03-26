@@ -38,3 +38,42 @@ export interface TextMessageProps {
   sender: string;
   content: string;
 }
+
+// Types from the original file
+export type Interest = {
+  id: string;
+  interest: string;
+};
+
+export type QuestionOption = {
+  placeholder?: string;
+  values?: any;
+  dbTable?: string;
+  dbColumn?: string;
+  dbIdentifier?: string;
+  range?: [number, number, number?];
+};
+
+export type Question = {
+  title: string;
+  description: string;
+  type: "text" | "multi-select" | "slider" | "media";
+  key: string;
+  options?: QuestionOption;
+  skipable?: boolean;
+};
+
+// Updated type to include skipped information
+export type Answer = {
+  value: string | string[] | number;
+  skipped: boolean;
+};
+
+export interface CreationInputProps {
+  question: {
+    type: string;
+    options?: QuestionOption;
+  };
+  value: any;
+  onValueChange: (value: any) => void;
+}

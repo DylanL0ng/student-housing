@@ -18,7 +18,6 @@ import {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  console.log("tab layout");
   return (
     <Tabs
       screenOptions={{

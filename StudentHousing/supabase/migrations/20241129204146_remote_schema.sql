@@ -125,7 +125,10 @@ alter table "public"."user_interests" add constraint "user_interests_user_id_fke
 
 alter table "public"."user_interests" validate constraint "user_interests_user_id_fkey";
 
-create type "public"."geometry_dump" as ("path" integer[], "geom" geometry);
+CREATE TYPE IF NOT EXISTS public.geometry_dump AS (
+  path integer[],
+  geom geometry
+);
 
 create type "public"."valid_detail" as ("valid" boolean, "reason" character varying, "location" geometry);
 

@@ -17,12 +17,10 @@ const signIn = async () => {
     if (isSuccessResponse(response)) {
       // read user's info
       if (response.data.idToken) {
-        // console.log(response.data.idToken);
         const { data, error } = await supabase.auth.signInWithIdToken({
           provider: "google",
           token: response.data.idToken,
         });
-        console.log(error, data);
       }
     } else if (isNoSavedCredentialFoundResponse(response)) {
       // Android and Apple only.

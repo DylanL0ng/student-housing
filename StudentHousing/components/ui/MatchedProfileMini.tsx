@@ -1,14 +1,37 @@
+import { AuthContext } from "@/app/auth_provider";
+import { supabase } from "@/lib/supabase";
+import { User } from "@/typings";
 import { LinearGradient } from "expo-linear-gradient";
-import React from "react";
-import { Image, Text, View } from "react-native";
+import { Link, useNavigation, useRouter } from "expo-router";
+import React, { useContext } from "react";
+import { Image, Text, TouchableOpacity, View } from "react-native";
 
-type Props = {
-  name: string;
-};
+const MatchedProfileMini = (props: User) => {
+  const router = useRouter();
+  const auth = useContext(AuthContext);
+  const openConversation = async () => {
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("conversation_id")
+      .match({
+        user_id: auth?.session?.user.id,
+        other_id: props.id,
+      })
+      .single();
 
-const MatchedProfileMini = (props: Props) => {
+    router.push({
+      pathname: "/message_thread",
+      params: {
+        conversationId: data?.conversation_id,
+        target: JSON.stringify(props),
+      },
+    });
+  };
+
+  console.log(props.full_name);
+
   return (
-    <View>
+    <TouchableOpacity onPress={openConversation} activeOpacity={0.75}>
       <View className="w-32 bg-gray-300 rounded aspect-[3/4] relative overflow-hidden">
         <Image
           className="absolute inset-0"
@@ -23,9 +46,9 @@ const MatchedProfileMini = (props: Props) => {
         />
       </View>
       <Text className="text-center font-bold mt-2 w-full">
-        {props.name || "Unknown"}
+        {props.full_name || "Unknown"}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 };
 

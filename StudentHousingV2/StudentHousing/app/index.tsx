@@ -5,20 +5,21 @@ import supabase from "./lib/supabase";
 const Index = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Session got", session);
       if (session) {
-        return router.replace("/auth/creation");
+        return router.replace("/(tabs)");
       }
     });
 
     supabase.auth.onAuthStateChange((_, session) => {
       if (!session) {
         return router.replace("/auth/login");
+      } else {
+        return router.replace("/(tabs)");
       }
     });
   }, []);
 
-  return <Redirect href={"/auth/login"} />;
+  return <></>;
 };
 
 export default Index;

@@ -10,8 +10,6 @@ const MatchedProfileMini = (props: User) => {
 
   const openConversation = async () => {
     // Fetch conversation id
-    // console.log("Opening conversation with", props.id);
-    // console.log(Conversations[props.id + ":conversation"]);
     router.push({
       pathname: "/message_thread",
       params: {

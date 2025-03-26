@@ -10,28 +10,33 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { AuthContext, StorageContext } from "../auth_provider";
-
-interface User {
-  id: string;
-  full_name: string;
-  date_of_birth: string;
-  location: string;
-  interests: string[];
-}
+import { User } from "@/typings";
+import { useSelector } from "react-redux";
+import SwipeHandler from "../SwipeHandler";
 
 export default function DiscoverScreen() {
-  const auth = useContext(AuthContext);
-  const storage = useContext(StorageContext);
+  console.log("DiscoverScreen");
+  // const auth = useContext(AuthContext);
+  // const storage = useContext(StorageContext);
 
   const [updateCount, setUpdateCount] = useState(0);
-  const [usersToMatch, setUsersToMatch] = useState<User[]>([]);
+  // const [usersToMatch, setUsersToMatch] = useState<User[]>([]);
 
-  useEffect(() => {
-    if (!auth?.session) return;
-    if (!auth.interests) return;
-    if (!storage?.interests) return;
-    getUsersToMatch();
-  }, [auth?.session, storage?.interests, auth?.interests]);
+  // useEffect(() => {
+  //   if (!auth?.session) return;
+  //   if (!auth?.session.user) return;
+  //   if (!storage?.state.interests) return;
+  //   if (!storage?.interests) return;
+  //   getUsersToMatch();
+  //   console.log("hello");
+  // }, [
+  //   auth?.session,
+  //   storage?.interests,
+  //   storage?.state.interests,
+  //   auth?.session?.user,
+  // ]);
+
+  // const search = useSelector((state) => state.search.people);
 
   const cosineSimilarity = (vectorA: number[], vectorB: number[]): number => {
     /**
@@ -73,15 +78,15 @@ export default function DiscoverScreen() {
      * @param users - An array of users to compare
      * @returns An array of users sorted by similarity to the authenticated user
      */
-    if (!storage?.interests || !auth?.interests) return [];
+    if (!storage?.interests || !storage.state.interests) return [];
 
     const global_interests = Object.keys(storage.interests).sort();
 
     const personal_interest_vector = global_interests.map((interest) =>
-      auth.interests.includes(interest) ? 1 : 0
+      storage.state.interests.includes(interest) ? 1 : 0
     );
 
-    const matchedSimilarities = users.map((user) => {
+    const matchedSimilarities = users.map((user: User) => {
       const interest_vector = global_interests.map((interest) =>
         user.interests.includes(interest) ? 1 : 0
       );
@@ -100,8 +105,8 @@ export default function DiscoverScreen() {
   };
 
   const getUsersToMatch = async () => {
+    if (!auth?.session?.user) return;
     try {
-      if (!auth?.session?.user) throw new Error("No user session found!");
       const { data, error, status } = await supabase
         .from("profiles")
         .select(
@@ -132,31 +137,29 @@ export default function DiscoverScreen() {
 
       setUsersToMatch(calculateUsersSimilarities(newUsers));
       setUpdateCount(updateCount + 1);
+      console.log(usersToMatch);
     } catch (error) {
       if (error instanceof Error) {
+        console.log("ERROR FROM getUsersToMatch", error.message);
         Alert.alert(error.message);
       }
     }
   };
 
+  // console.log(search);
+  const search = [
+    {
+      full_name: "John Doe",
+      date_of_birth: "1999-01-01",
+      location: "New York, NY",
+      interests: ["music", "sports", "art"],
+      id: "1",
+    },
+  ];
+
   return (
     <View className="flex-1 px-4">
-      <GestureHandlerRootView>
-        <View className="flex-1">
-          <Swiper
-            key={updateCount}
-            data={usersToMatch}
-            cardStyle={{ height: "100%", width: "100%" }}
-            renderCard={ProfileCard}
-            onIndexChange={(index) => {
-              if (index === usersToMatch.length) {
-                getUsersToMatch();
-              }
-              console.log(index, usersToMatch.length);
-            }}
-          ></Swiper>
-        </View>
-      </GestureHandlerRootView>
+      <SwipeHandler on data={search} Card={ProfileCard}></SwipeHandler>
     </View>
   );
 }

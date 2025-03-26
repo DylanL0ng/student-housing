@@ -76,7 +76,7 @@ const ProfileCard = ({
               <Entypo name="location-pin" size={18} />
             </Text>
             <Text className="text-lg font-medium text-gray-200">
-              {location} - 2 kms away
+              Dublin - 2 kms away
             </Text>
           </View>
         </View>

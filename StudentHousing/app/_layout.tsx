@@ -1,36 +1,45 @@
 import { DarkTheme, ThemeProvider } from "@react-navigation/native";
 import "@/global.css";
-import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
-import { SplashScreen } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { AppState, Text, View } from "react-native";
-import { Stack } from "expo-router";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import Auth from "@/components/Auth";
-import { Session } from "@supabase/supabase-js";
-import Header from "@/components/ui/Header";
-import AuthProvider from "./auth_provider";
+import { View } from "react-native";
+// import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
+// import { SplashScreen } from "expo-router";
+// import { StatusBar } from "expo-status-bar";
+// import { AppState, Text, View } from "react-native";
+// import { Stack } from "expo-router";
+// import { useEffect, useState } from "react";
+// // import { supabase } from "@/lib/supabase";
+// import Auth from "@/components/Auth";
+// import { Session } from "@supabase/supabase-js";
+// import Header from "@/components/ui/Header";
+// import AuthProvider from "./auth_provider";
+// import { createStore } from "redux";
+// import rootReducer from "./store/reducer";
+// import { Provider } from "react-redux";
 
 // SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [session, setSession] = useState<Session | null>(null);
+  // const [session, setSession] = useState<Session | null>(null);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+  // const store = createStore(rootReducer);
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-  }, []);
+  // useEffect(() => {
+  //   supabase.auth.getSession().then(({ data: { session } }) => {
+  //     setSession(session);
+  //   });
 
-  return (
-    <GluestackUIProvider mode="light">
-      {session && session.user ? (
-        <AuthProvider>
+  //   supabase.auth.onAuthStateChange((_event, session) => {
+  //     setSession(session);
+  //   });
+  // }, []);
+
+  // {
+  /* <GluestackUIProvider mode="light">
+      {true ? (
+        // <AuthProvider>
+        // <
+
+        <Provider store={store}>
           <Stack
             screenOptions={{
               header: ({ route, options }) => {
@@ -52,10 +61,13 @@ export default function RootLayout() {
               }}
             />
           </Stack>
-        </AuthProvider>
+        </Provider>
       ) : (
+        // </AuthProvider>
         <Auth />
       )}
-    </GluestackUIProvider>
-  );
+    </GluestackUIProvider> */
+  // }
+
+  return <View></View>;
 }

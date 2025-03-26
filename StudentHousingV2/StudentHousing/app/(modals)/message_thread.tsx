@@ -124,7 +124,6 @@ const MessageThread = () => {
       ],
     ]);
     setTextInputMessage("");
-    console.log(Conversations[convoId].messages);
   };
 
   return (

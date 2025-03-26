@@ -2,7 +2,7 @@ import { Colors } from "@/constants/Colors";
 import { Tabs } from "expo-router";
 import {
   Platform,
-  TouchableOpacity,
+  Pressable,
   TouchableWithoutFeedback,
   useColorScheme,
 } from "react-native";
@@ -12,24 +12,28 @@ import {
   Ionicons,
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import TailwindColours from "@/constants/TailwindColours";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   return (
-    // <SafeAreaView style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         tabBarStyle: {
+          backgroundColor: TailwindColours.background.secondary,
           paddingBlock: 8,
           height: 70,
           borderWidth: 0,
           boxShadow: "0",
         },
-        tabBarButton: (props) => (
-          <TouchableOpacity activeOpacity={1.0} {...props} />
-        ),
+        tabBarButton: (props) => <Pressable {...props} />,
+        tabBarIconStyle: {
+          color: TailwindColours.text.muted,
+        },
         tabBarLabelStyle: {
           marginTop: 2,
+          color: TailwindColours.text.muted,
         },
         tabBarActiveTintColor: "blue",
         headerShown: false,
@@ -87,6 +91,5 @@ export default function TabLayout() {
 
       /> */}
     </Tabs>
-    // </SafeAreaView>
   );
 }

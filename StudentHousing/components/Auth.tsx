@@ -14,7 +14,10 @@ export default function Auth() {
       password: password,
     });
 
-    if (error) Alert.alert(error.message);
+    if (error) {
+      console.log("Error from signInWithEmail", error.message);
+      Alert.alert(error.message);
+    }
     setLoading(false);
   }
 
@@ -28,7 +31,11 @@ export default function Auth() {
       password: password,
     });
 
-    if (error) Alert.alert(error.message);
+    if (error) {
+      console.log("Error from signUpWithEmail", error.message);
+      Alert.alert(error.message);
+    }
+
     if (!session)
       Alert.alert("Please check your inbox for email verification!");
     setLoading(false);
