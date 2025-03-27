@@ -3,16 +3,21 @@ import { Profile as _Profile } from "@/typings";
 import { FontAwesome } from "@expo/vector-icons";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect } from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
-import { Text, View } from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+// import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { Text, useTheme, View } from "@tamagui/core";
+import { Button } from "@tamagui/button";
 
 const Profile = () => {
   const router = useRouter();
   const navigation = useNavigation();
+  const theme = useTheme();
+
   let { profile } = useLocalSearchParams();
 
-  const parsedProfile = JSON.parse(
+  const { media, title } = JSON.parse(
     Array.isArray(profile) ? profile[0] : profile
   ) as _Profile;
 
@@ -24,11 +29,11 @@ const Profile = () => {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <View style={{ flex: 1 }}>
+      <View bg={"$background"} style={{ flex: 1 }}>
         <View
+          bg={"$background"}
           style={{
             width: "100%",
-            backgroundColor: "red",
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "center",
@@ -36,12 +41,19 @@ const Profile = () => {
             paddingInline: 16,
           }}
         >
-          <Text>Name</Text>
-          <TouchableOpacity onPress={() => router.back()}>
-            <FontAwesome name="close" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text fontWeight={"800"} fontSize={"$8"} color={"$color"}>
+              {title}
+            </Text>
+            <Text fontWeight={"600"} fontSize={"$6"} color={"$color12"}>
+              {}
+            </Text>
+          </View>
+          <Button circular={true} onPress={() => router.back()}>
+            <FontAwesome color={theme.color11.val} name="close" />
+          </Button>
         </View>
-        <ImageCollection media={parsedProfile.media} />
+        <ImageCollection media={media} />
       </View>
     </SafeAreaView>
   );

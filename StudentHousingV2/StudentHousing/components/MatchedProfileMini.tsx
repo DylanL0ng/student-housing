@@ -3,7 +3,9 @@ import { User } from "@/typings";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, useNavigation, useRouter } from "expo-router";
 import React, { useContext } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, TouchableOpacity } from "react-native";
+
+import { Text, View } from "@tamagui/core";
 
 const MatchedProfileMini = (props: User) => {
   const router = useRouter();
@@ -34,7 +36,9 @@ const MatchedProfileMini = (props: User) => {
           style={styles.inset}
         />
       </View>
-      <Text style={styles.text}>{props.name || "Unknown"}</Text>
+      <Text color={"$color08"} style={styles.text}>
+        {props.name || "Unknown"}
+      </Text>
     </TouchableOpacity>
   );
 };
@@ -54,7 +58,7 @@ const styles = StyleSheet.create({
   },
   text: {
     textAlign: "center",
-    fontWeight: "bold",
+    fontWeight: "semibold",
     marginTop: 8,
     width: "100%",
   },

@@ -1,8 +1,12 @@
 import React, { useCallback } from "react";
-import { Text, View, ScrollView } from "react-native";
-import { Input, Slider as RNESlider, Chip, Slider } from "@rneui/themed";
+import { Text, ScrollView } from "react-native";
 import TailwindColours from "@/constants/TailwindColours";
 import { QuestionOption, Interest } from "@/typings";
+
+import { Slider } from "@tamagui/slider";
+import { Input } from "@tamagui/input";
+import { Button } from "@tamagui/button";
+import { useTheme, View } from "@tamagui/core";
 
 interface CreationInputProps {
   question: {
@@ -23,16 +27,18 @@ export const CreationText = ({
       value={value}
       onChangeText={onValueChange}
       placeholder={question.options?.placeholder}
-      placeholderTextColor={TailwindColours.text.muted}
-      style={{
-        paddingInline: 16,
-        color: TailwindColours.text.primary,
-        backgroundColor: TailwindColours.background.secondary,
-        borderColor: TailwindColours.background.tertiary,
-        borderWidth: 2,
-        height: 48,
-        borderRadius: 8,
-      }}
+      placeholderTextColor="$color"
+      // placeholderTextColor=""
+      // placeholderTextColor={TailwindColours.text.muted}
+      // style={{
+      //   paddingInline: 16,
+      //   color: TailwindColours.text.primary,
+      //   backgroundColor: TailwindColours.background.secondary,
+      //   borderColor: TailwindColours.background.tertiary,
+      //   borderWidth: 2,
+      //   height: 48,
+      //   borderRadius: 8,
+      // }}
     />
   );
 };
@@ -64,31 +70,35 @@ export const CreationMultiSelect = ({
       nestedScrollEnabled={true}
     >
       {question.options?.values?.map((interest: Interest, index: number) => (
-        <Chip
+        <Button
           key={index}
-          title={interest.interest}
-          type={value.includes(interest.id) ? "solid" : "outline"}
           onPress={() => selectOption(interest.id)}
-        />
+          variant={value.includes(interest.id) ? undefined : "outlined"}
+        >
+          {interest.interest}
+        </Button>
       ))}
     </ScrollView>
   );
 };
 
 export const CreationSlider = ({
-  question,
-  value,
-  onValueChange,
+  question = { type: "slider", options: { range: [0, 20000, 1] } },
+  value = 0,
+  onValueChange = () => {},
 }: CreationInputProps) => {
   const [min = 0, max = 20000, step = 1] = question.options?.range || [];
+  const theme = useTheme();
 
   return (
     <View
+      bg={"$background04"}
+      borderColor={"$borderColor"}
+      borderWidth={"$1"}
+      // borderradius={"$2"}
       style={{
-        backgroundColor: TailwindColours.background.secondary,
-        borderColor: TailwindColours.background.tertiary,
-        borderWidth: 2,
-        borderRadius: 8,
+        // borderWidth: 2,
+        // borderRadius: theme.$2,
         paddingHorizontal: 16,
         paddingVertical: 16,
       }}
@@ -106,7 +116,7 @@ export const CreationSlider = ({
             fontSize: 14,
           }}
         >
-          ${min}
+          €{min}
         </Text>
         <Text
           style={{
@@ -127,6 +137,23 @@ export const CreationSlider = ({
         </Text>
       </View>
       <Slider
+        onValueChange={onValueChange}
+        defaultValue={[value]}
+        max={max}
+        step={step}
+        min={min}
+      >
+        <Slider.Track>
+          <Slider.TrackActive />
+        </Slider.Track>
+        <Slider.Thumb size={"$2"} index={0} circular />
+      </Slider>
+    </View>
+  );
+};
+
+{
+  /* <Slider
         value={value}
         onValueChange={onValueChange}
         maximumValue={max}
@@ -149,7 +176,5 @@ export const CreationSlider = ({
           height: 8,
           borderRadius: 4,
         }}
-      />
-    </View>
-  );
-};
+      /> */
+}

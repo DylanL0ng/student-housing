@@ -1,9 +1,12 @@
 import { Entypo, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useContext, useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity } from "react-native";
 import ImageCollection from "./Profile/ImageCollection";
 import { Profile } from "@/typings";
+
+import { View } from "@tamagui/core";
+import { router } from "expo-router";
 
 const calculateAge = (timestamptz: string) => {
   const birthDate = new Date(timestamptz);
@@ -63,13 +66,27 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
         </View>
         <View style={{ display: "flex", flexDirection: "row", gap: 8 }}>
           {profile.interests?.map((interest, index) => (
-            <View key={index} style={styles.personalInfoInterestsWrapper}>
+            <View
+              key={index}
+              bg={"$yellow5"}
+              style={styles.personalInfoInterestsWrapper}
+            >
               <Text style={styles.personalInfoInterestsText}>{interest}</Text>
             </View>
           ))}
         </View>
       </View>
-      <TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() =>
+          router.push({
+            pathname: "/(modals)/profile",
+            params: {
+              profile: JSON.stringify(profile),
+            },
+          })
+        }
+      >
         <View style={styles.dropdownButton}>
           <Entypo name="chevron-down" size={28} color="white" />
         </View>
@@ -122,15 +139,18 @@ const styles = StyleSheet.create({
     fontWeight: "medium",
   },
   personalInfoInterestsWrapper: {
-    backgroundColor: "rgba(34, 197, 94, 0.5)",
     boxSizing: "border-box",
     borderColor: "#22c55e",
-    borderRadius: 30,
+    borderRadius: 10000,
+    minWidth: 64,
+    justifyContent: "center",
+    display: "flex",
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   personalInfoInterestsText: {
     color: "white",
+    textAlign: "center",
     fontSize: 14,
   },
   dropdownButton: {

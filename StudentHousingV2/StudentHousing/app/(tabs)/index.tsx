@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Platform, View } from "react-native";
+import { Image, StyleSheet, Platform } from "react-native";
 import ProfileCard from "@/components/ProfileCard";
 import SwipeHandler from "@/components/SwipeHandler";
 import { useState } from "react";
@@ -7,6 +7,8 @@ import { User } from "@/typings";
 import { Users } from "@/constants/Users";
 import supabase from "../lib/supabase";
 import TailwindColours from "@/constants/TailwindColours";
+
+import { View } from "@tamagui/core";
 
 const requestUpdate = async (): Promise<User[]> => {
   return new Promise((resolve) => {
@@ -30,14 +32,12 @@ export default function HomeScreen() {
   const handleSwipeLeft = () => {};
 
   return (
-    <View
-      style={{ flex: 1, backgroundColor: TailwindColours.background.primary }}
-    >
+    <View bg={"$background"} style={{ flex: 1 }}>
       <SwipeHandler
         onSwipeLeft={handleSwipeLeft}
         onSwipeRight={handleSwipeRight}
         requestUpdate={handleRequestUpdate}
-        data={users.map((user) => ({ profile: user.profile }))} // Map users to objects with profile property
+        data={users.map((user) => ({ profile: user.profile, id: user.id }))} // Map users to objects with profile property
         Card={ProfileCard}
         style={{ marginTop: 16, margin: 16 }}
       />

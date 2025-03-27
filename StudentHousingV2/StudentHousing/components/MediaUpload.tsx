@@ -1,70 +1,71 @@
-import TailwindColours from "@/constants/TailwindColours";
 import { MaterialIcons } from "@expo/vector-icons";
-import React, { useState, useCallback } from "react";
-import { View, StyleSheet, TouchableOpacity, Image } from "react-native";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
+import { StyleSheet, TouchableOpacity, Image } from "react-native";
+
+import { useTheme, View } from "@tamagui/core";
 
 import * as ImagePicker from "expo-image-picker";
 import supabase from "@/app/lib/supabase";
+import { Session } from "@supabase/supabase-js";
 
-export interface ImageItem {
-  uri?: string;
-  id?: string;
-  path?: string;
+export interface ImageObject {
+  uri: string;
+  order: number;
 }
 
 export interface MediaUploadProps {
-  images: ImageItem[];
-  onUpload: (index: number, uri: string, mimeType: string) => void;
-  onDelete: (index: number) => void;
+  images: ImageObject[];
+  onUpload: (image: ImageObject) => void;
+  onDelete: (image: ImageObject) => void;
+  onLoad: () => void;
 }
+
+export const uploadImage = async (session: Session, image: ImageObject) => {
+  try {
+    const arraybuffer = await fetch(image.uri).then((res) => res.arrayBuffer());
+    const fileExt = image.uri.split(".").pop()?.toLowerCase() ?? "jpeg";
+    const path = `${session?.user.id}/${image.order}.${fileExt}`;
+    const { error } = await supabase.storage
+      .from("profile-images")
+      .update(path, arraybuffer, {
+        contentType: "image/jpeg",
+      });
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Upload error:", error);
+  }
+};
+
+export const deleteImage = async (session: Session, image: ImageObject) => {
+  try {
+    if (!image) return;
+
+    const fileExt = image.uri.split(".").pop()?.toLowerCase() ?? "jpeg";
+    const { error } = await supabase.storage
+      .from("profile-images")
+      .remove([`${session.user.id}/${image.order}.${fileExt}`]);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Delete error:", error);
+  }
+};
 
 const MediaUpload: React.FC<MediaUploadProps> = ({
   images,
   onUpload,
   onDelete,
+  onLoad,
 }) => {
-  const [uploading, setUploading] = useState(false);
+  const theme = useTheme();
 
-  const uploadImage = async (idx: number, uri: string, mimeType: string) => {
-    try {
-      setUploading(true);
-
-      const arraybuffer = await fetch(uri).then((res) => res.arrayBuffer());
-      const fileExt = uri.split(".").pop()?.toLowerCase() ?? "jpeg";
-      const path = `1/${idx}.${fileExt}`;
-
-      const { error } = await supabase.storage
-        .from("profile-images")
-        .upload(path, arraybuffer, { contentType: mimeType ?? "image/jpeg" });
-
-      if (error) throw error;
-      onUpload(idx, uri, mimeType); // Callback to parent with image path
-    } catch (error) {
-      console.error("Upload error:", error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const deleteImage = async (index: number) => {
-    try {
-      const imageToDelete = images[index];
-      if (!imageToDelete?.path) return;
-      setUploading(true);
-      const { error } = await supabase.storage
-        .from("profile-images")
-        .remove([imageToDelete.path]);
-      if (error) throw error;
-      onDelete(index); // Callback to parent after deletion is successful
-    } catch (error) {
-      console.error("Delete error:", error);
-    } finally {
-      setUploading(false);
-    }
-  };
+  useEffect(() => {
+    onLoad();
+  }, [onLoad]);
 
   const handleImagePick = useCallback(
-    async (index: number) => {
+    async (order: number) => {
       try {
         const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -78,48 +79,57 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
         const image = result.assets[0];
         if (!image.uri) throw new Error("No image uri!");
-
-        await uploadImage(index, image.uri, image.mimeType ?? "image/jpeg");
+        onUpload({ order, uri: image.uri });
       } catch (error) {
         console.error("Image pick error:", error);
       }
     },
-    [images]
+    [uploadImage]
   );
+
+  const renderImages = useMemo(() => {
+    const imageMap = new Map(images.map((img) => [img.order, img]));
+
+    return Array.from({ length: 9 }, (_, idx) => {
+      const image = imageMap.get(idx);
+
+      return (
+        <TouchableOpacity
+          style={{
+            ...styles.cell,
+            backgroundColor: theme.color02.val,
+          }}
+          key={`${idx}`}
+          onPress={() => handleImagePick(idx)}
+        >
+          {image ? (
+            <>
+              <Image
+                fadeDuration={0}
+                source={{ uri: image.uri }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+              <TouchableOpacity
+                onPress={() => onDelete({ uri: image.uri, order: idx })}
+                style={styles.deleteButton}
+              >
+                <MaterialIcons name="close" size={24} color="black" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity style={styles.addButton}>
+              <MaterialIcons name="add" size={24} color="black" />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      );
+    });
+  }, [images, theme.color02.val, handleImagePick, deleteImage]);
 
   return (
     <View style={styles.container}>
-      <View style={styles.wrapper}>
-        {Array(9)
-          .fill(0)
-          .map((_, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={styles.cell}
-              onPress={() => handleImagePick(idx)}
-            >
-              {images[idx]?.uri ? (
-                <>
-                  <Image
-                    source={{ uri: images[idx].uri }}
-                    style={styles.image}
-                    resizeMode="cover"
-                  />
-                  <TouchableOpacity
-                    onPress={() => deleteImage(idx)}
-                    style={styles.deleteButton}
-                  >
-                    <MaterialIcons name="close" size={24} color="black" />
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TouchableOpacity style={styles.addButton}>
-                  <MaterialIcons name="add" size={24} color="black" />
-                </TouchableOpacity>
-              )}
-            </TouchableOpacity>
-          ))}
-      </View>
+      <View style={styles.wrapper}>{renderImages}</View>
     </View>
   );
 };
@@ -139,7 +149,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     width: "32%",
     height: 165,
-    backgroundColor: TailwindColours.text.muted,
     borderRadius: 8,
     margin: 1,
   },

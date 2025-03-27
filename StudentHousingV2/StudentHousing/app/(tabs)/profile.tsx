@@ -2,10 +2,19 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import supabase from "../lib/supabase";
 import MediaUpload, { ImageItem } from "@/components/MediaUpload";
-import TailwindColours from "@/constants/TailwindColours";
+import { CreationSlider } from "@/components/Inputs/Creation";
+import { useNavigation } from "expo-router";
 
 export default function ProfileScreen() {
   const [images, setImages] = useState<ImageItem[]>([]);
+
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    navigation.setOptions({
+      header: () => <></>,
+    });
+  }, [navigation]);
 
   const getUserProfileImages = async () => {
     const { data, error } = await supabase.storage
@@ -61,11 +70,24 @@ export default function ProfileScreen() {
       >
         <Text>Logout</Text>
       </TouchableOpacity>
-      <MediaUpload
+      <CreationSlider
+        question={{
+          type: "slider",
+          options: {
+            range: [0, 20000, 1],
+            dbTable: "profiles",
+            dbColumn: "budget",
+            dbIdentifier: "id",
+          },
+        }}
+        value={0}
+        onValueChange={() => {}}
+      />
+      {/* <MediaUpload
         images={images}
         onUpload={handleUpload}
         onDelete={handleDelete}
-      />
+      /> */}
     </View>
   );
 }

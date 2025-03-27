@@ -1,19 +1,15 @@
 import { Entypo, Feather } from "@expo/vector-icons";
 import { Link, Router, useNavigation, useRouter } from "expo-router";
 import React, { useContext, useEffect, useState } from "react";
-import {
-  Image,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Image, StyleSheet, TouchableOpacity } from "react-native";
 
+import { View, Text, useTheme } from "@tamagui/core";
+import { Input } from "@tamagui/input";
 import { useLocalSearchParams } from "expo-router";
 import { User, TextMessageProps, Conversation } from "@/typings";
 // import Animated from "react-native-reanimated";
 import { Conversations } from "@/constants/Users";
+import { Button } from "@tamagui/button";
 // // import { supabase } from "@/lib/supabase";
 // import UUID from "react-native-uuid";
 
@@ -31,13 +27,18 @@ const Header: React.FC<{
     });
   };
 
+  const theme = useTheme();
+
   return (
-    <View style={styles.headerContainer}>
-      <TouchableOpacity activeOpacity={0.75} onPress={() => router.back()}>
-        <View style={styles.backButton}>
-          <Entypo name="chevron-left" size={20} color="black" />
-        </View>
-      </TouchableOpacity>
+    <View bg={"$color2"} style={styles.headerContainer}>
+      <Button
+        circular={true}
+        bg={"$color6"}
+        onPress={() => router.back()}
+        style={styles.backButton}
+      >
+        <Entypo name="chevron-left" size={20} color={theme.white9.val} />
+      </Button>
       <View style={styles.userInfoContainer}>
         <TouchableOpacity onPress={gotoUserProfile}>
           <Image
@@ -46,13 +47,19 @@ const Header: React.FC<{
           />
         </TouchableOpacity>
         <View>
-          <Text style={styles.userName}>{conversation.profile.title}</Text>
-          <Text>Added today!</Text>
+          <Text color={"$white5"} style={styles.userName}>
+            {conversation.profile.title}
+          </Text>
+          <Text color={"$white8"}>Added today!</Text>
         </View>
       </View>
-      <View style={styles.menuButton}>
-        <Entypo name="dots-three-horizontal" size={20} color="black" />
-      </View>
+      <Button circular={true} bg={"$color6"} style={styles.menuButton}>
+        <Entypo
+          name="dots-three-horizontal"
+          size={20}
+          color={theme.white9.val}
+        />
+      </Button>
     </View>
   );
 };
@@ -67,6 +74,7 @@ const TextMessage: React.FC<TextMessageProps> = ({ sender, content }) => (
     ]}
   >
     <Text
+      bg={sender ? "$blue7" : "$white10"}
       style={[
         styles.messageText,
         sender ? styles.senderMessage : styles.receiverMessage,
@@ -85,6 +93,8 @@ const MessageThread = () => {
   const navigation = useNavigation();
   const { target } = useLocalSearchParams();
 
+  const theme = useTheme();
+
   const conversation: Conversation = JSON.parse(
     Array.isArray(target) ? target[0] : target
   );
@@ -102,33 +112,35 @@ const MessageThread = () => {
   const sendMessage = () => {
     // Send message
     let convoId = conversation.profile.id + ":conversation";
-    if (!Conversations[convoId])
-      Conversations[convoId] = {
-        id: convoId,
-        profile: conversation.profile,
-        messages: [],
-      };
-
-    Conversations[convoId].messages.push({
+    const newMessage = {
       message_id: new Date().toISOString() + ":message",
       conversation_id: new Date().toISOString() + ":conversation",
       content: textInputMessage,
       sender: "1",
       sent_at: new Date().toISOString(),
-    });
+    };
 
-    setMessageHistory([
-      ...messageHistory,
-      Conversations[convoId].messages[
-        Conversations[convoId].messages.length - 1
-      ],
-    ]);
+    // if (!Conversations[convoId])
+    //   Conversations[convoId] = {
+    //     id: convoId,
+    //     profile: conversation.profile,
+    //     messages: [],
+    //   };
+
+    // Conversations[convoId].messages.push({
+    //   message_id: new Date().toISOString() + ":message",
+    //   conversation_id: new Date().toISOString() + ":conversation",
+    //   content: textInputMessage,
+    //   sender: "1",
+    //   sent_at: new Date().toISOString(),
+    // });
+
+    setMessageHistory([...messageHistory, newMessage]);
     setTextInputMessage("");
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* <Text>Test</Text> */}
+    <View bg={"$background"} style={{ flex: 1 }}>
       <View style={{ flex: 1, paddingHorizontal: 8, gap: 4 }}>
         {messageHistory &&
           messageHistory.map((message, index) => (
@@ -139,19 +151,23 @@ const MessageThread = () => {
       </View>
       <View style={styles.inputContainer}>
         <View style={styles.textInputWrapper}>
-          <TextInput
-            style={{ flex: 1, marginHorizontal: 16, height: "100%" }}
+          <Input
+            style={{ flex: 1, height: "100%" }}
             placeholder="Write your message here"
+            borderRadius={"$radius.9"}
+            placeholderTextColor={"$placeholderColor"}
             onChangeText={(value) => setTextInputMessage(value)}
             onSubmitEditing={sendMessage}
             value={textInputMessage}
           />
         </View>
-        <TouchableOpacity onPress={sendMessage}>
-          <View style={styles.sendButton}>
-            <Feather name="send" size={14} color="white" />
-          </View>
-        </TouchableOpacity>
+        <Button
+          circular={true}
+          style={{ ...styles.sendButton }}
+          onPress={sendMessage}
+        >
+          <Feather name="send" size={14} color="white" />
+        </Button>
       </View>
     </View>
   );
@@ -170,7 +186,6 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     width: 40,
     borderRadius: 9999,
-    backgroundColor: "#CBD5E1", // slate-300
     alignItems: "center",
     justifyContent: "center",
   },
@@ -189,32 +204,29 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   menuButton: {
-    aspectRatio: 1,
     width: 40,
-    borderRadius: 9999,
-    backgroundColor: "#CBD5E1",
     alignItems: "center",
     justifyContent: "center",
   },
   messageContainer: {
+    paddingBlock: 8,
     width: "100%",
     flexDirection: "row",
     justifyContent: "flex-end",
   },
   messageText: {
     maxWidth: "70%",
-
     borderRadius: 15,
     paddingVertical: 8,
     paddingHorizontal: 16,
     color: "white",
   },
   senderMessage: {
-    backgroundColor: "#475569", // slate-600
+    // backgroundColor: "#475569", // slate-600
     borderBottomRightRadius: 0,
   },
   receiverMessage: {
-    backgroundColor: "#3B82F6", // blue-500
+    // backgroundColor: "#3B82F6", // blue-500
     borderBottomLeftRadius: 0,
   },
   inputContainer: {
@@ -235,10 +247,10 @@ const styles = StyleSheet.create({
   sendButton: {
     height: 48,
     aspectRatio: 1,
-    backgroundColor: "#64748B", // slate-500
+    // backgroundColor: "#64748B", // slate-500
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 9999,
+    // borderRadius: 9999,
   },
 });
 

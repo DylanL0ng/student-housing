@@ -3,8 +3,10 @@ import MatchedProfileMini from "@/components/MatchedProfileMini";
 import { Conversations, Relationships, Users } from "@/constants/Users";
 import { Conversation, Relationship, User } from "@/typings";
 import React, { useCallback, useContext, useEffect, useState } from "react";
-import { FlatList, SafeAreaView, ScrollView, Text, View } from "react-native";
+import { FlatList, SafeAreaView, ScrollView } from "react-native";
 import { StyleSheet } from "react-native";
+
+import { View, Text } from "@tamagui/core";
 
 export default function MessagesScreen() {
   const [unInteractedMatches, setUnInteractedMatches] = useState<User[]>([]);
@@ -33,13 +35,15 @@ export default function MessagesScreen() {
 
   return (
     <SafeAreaView style={styles.flex}>
-      <View style={{ ...styles.flex, ...styles.container }}>
+      <View bg={"$background"} style={{ ...styles.flex, ...styles.container }}>
         <FlatList
           overScrollMode="never"
           ListHeaderComponent={
             <View>
               {unInteractedMatches.length > 0 && (
-                <Text style={styles.text}>Potential Flatmates</Text>
+                <Text color={"$color"} style={styles.text}>
+                  Potential Flatmates
+                </Text>
               )}
               <FlatList
                 overScrollMode="never"
@@ -52,7 +56,7 @@ export default function MessagesScreen() {
                 showsHorizontalScrollIndicator={false}
                 keyExtractor={(item, index) => index.toString()}
               />
-              <Text style={{ ...styles.text, ...styles.mt }}>
+              <Text color={"$color"} style={{ ...styles.text, ...styles.mt }}>
                 Conversations
               </Text>
             </View>

@@ -51,10 +51,11 @@ const ImageCollection = ({
         ))}
       </View>
       <Image
+        fadeDuration={0}
         source={{
           uri: media[currentMedia],
         }}
-        style={{ ..._styles.float, height: "80%" }}
+        style={{ ..._styles.float, borderRadius: 4, height: "80%" }}
       ></Image>
     </TouchableOpacity>
   );

@@ -1,33 +1,48 @@
-import { Stack, useNavigation, useRouter } from "expo-router";
+import { router, Stack, useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useLayoutEffect } from "react";
-import { ThemeProvider } from "@rneui/themed";
-import theme from "@/constants/Theme";
 import supabase from "../lib/supabase";
+import { Session } from "@supabase/supabase-js";
+import { useAuth } from "@/components/AuthProvider";
 
 const RootLayout = () => {
   const navigation = useNavigation();
-  const router = useRouter();
+  const { session } = useAuth();
+  // const router = useRouter();
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
+  const handleSession = async (session: Session | null) => {
+    if (!session) return;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select()
+      .eq("id", session.user.id);
+
+    if (error) {
+      supabase.auth.signOut();
+      return router.replace("/auth/login");
+    }
+
+    if (data.length === 0) {
+      return router.replace("/auth/creation");
+    }
+
+    if (data[0].created) return router.replace("/(tabs)");
+
+    return router.replace("/auth/creation");
+  };
+
   useEffect(() => {
-    supabase.auth.onAuthStateChange((_, session) => {
-      if (!session) {
-        return router.replace("/auth/login");
-      } else {
-        return router.replace("/auth/creation");
-      }
-    });
-  }, []);
+    handleSession(session);
+  }, [session]);
 
   return (
-    <ThemeProvider theme={theme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="login" />
-        <Stack.Screen name="creation" />
-      </Stack>
-    </ThemeProvider>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="login" />
+      <Stack.Screen name="creation" />
+    </Stack>
   );
 };
 

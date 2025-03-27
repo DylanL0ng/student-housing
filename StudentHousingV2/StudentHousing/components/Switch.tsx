@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { StyleSheet } from "react-native";
-import { TouchableOpacity, View, Text } from "react-native";
+import { StyleSheet, TouchableOpacity } from "react-native";
+import { Text, View } from "@tamagui/core";
+import { Button } from "@tamagui/button";
 
 type Option<T> = {
   state: T;
@@ -32,7 +33,13 @@ const Switch = <T extends string | number>({
 
   return (
     <TouchableOpacity onPress={handlePress} activeOpacity={1.0}>
-      <View style={styles.container}>
+      <View
+        bg={"$white12"}
+        borderWidth={"$1"}
+        paddingBlock={"$2"}
+        paddingInline={"$4"}
+        style={styles.container}
+      >
         <View
           style={{
             ...styles.circle,
@@ -74,8 +81,8 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#f1f5f9",
-    backgroundColor: "#cbd5e1",
+    // borderColor: "#f1f5f9",
+    // backgroundColor: "#cbd5e1",
     paddingHorizontal: 4,
     gap: 6,
     display: "flex",

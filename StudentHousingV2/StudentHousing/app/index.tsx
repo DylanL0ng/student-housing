@@ -1,25 +1,31 @@
-import { Redirect, router } from "expo-router";
+import { router } from "expo-router";
 import React, { useEffect } from "react";
 import supabase from "./lib/supabase";
+import { AuthProvider, useAuth } from "@/components/AuthProvider";
+// import { useAuth } from "../AuthProvider";
 
-const Index = () => {
+const Routing = () => {
+  const { session, loading } = useAuth();
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    if (!loading) {
       if (session) {
-        return router.replace("/(tabs)");
-      }
-    });
-
-    supabase.auth.onAuthStateChange((_, session) => {
-      if (!session) {
-        return router.replace("/auth/login");
+        router.replace("/(tabs)");
       } else {
-        return router.replace("/(tabs)");
+        router.replace("/auth/login");
       }
-    });
-  }, []);
+    }
+  }, [session, loading]);
 
   return <></>;
 };
 
-export default Index;
+const RootLayout = () => {
+  return (
+    <AuthProvider>
+      <Routing />
+    </AuthProvider>
+  );
+};
+
+export default RootLayout;

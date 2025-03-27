@@ -115,6 +115,7 @@ export default function SwipeHandler<T extends Record<string, unknown>>({
     return (
       <>
         <Animated.View
+          key={currentData[index].id}
           style={[styles.cardContainer, currentCardStyle]}
           {...panResponder.panHandlers}
         >
@@ -122,7 +123,10 @@ export default function SwipeHandler<T extends Record<string, unknown>>({
         </Animated.View>
 
         {index + 1 < currentData.length && (
-          <Animated.View style={[styles.cardContainer, nextCardStyle]}>
+          <Animated.View
+            key={currentData[index + 1].id}
+            style={[styles.cardContainer, nextCardStyle]}
+          >
             <Card {...currentData[index + 1]} />
           </Animated.View>
         )}

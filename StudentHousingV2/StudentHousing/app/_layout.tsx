@@ -4,7 +4,7 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -13,11 +13,25 @@ import { useEffect } from "react";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import Header from "@/components/Header";
 import { Text } from "react-native";
-import { AuthProvider } from "@/components/AuthProvider";
 import supabase from "./lib/supabase";
+
+import { TamaguiProvider, createTamagui } from "@tamagui/core";
+import { defaultConfig } from "@tamagui/config/v4";
+import { AuthProvider } from "@/components/AuthProvider";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+// you usually export this from a tamagui.config.ts file
+// defaultConfig.themes.dark
+const config = createTamagui(defaultConfig);
+
+type Conf = typeof config;
+
+// make imports typed
+declare module "@tamagui/core" {
+  interface TamaguiCustomConfig extends Conf {}
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -36,20 +50,22 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack
-        screenOptions={{
-          header: ({ route, options }) => {
-            return <Header page={options.title || route.name} />;
-          },
-        }}
-      >
-        <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
-        <Stack.Screen name="(modals)" options={{ presentation: "modal" }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AuthProvider>
+      <TamaguiProvider config={config} defaultTheme="dark">
+        <Stack
+          screenOptions={{
+            header: ({ route, options }) => {
+              return <Header page={options.title || route.name} />;
+            },
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
+          <Stack.Screen name="(modals)" options={{ presentation: "modal" }} />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        <StatusBar style="auto" />
+      </TamaguiProvider>
+    </AuthProvider>
   );
 }
 

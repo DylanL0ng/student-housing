@@ -8,15 +8,12 @@ import React, {
   useMemo,
 } from "react";
 import {
-  Text,
   TouchableOpacity,
-  View,
   Animated,
   Dimensions,
   ScrollView,
 } from "react-native";
 import supabase from "../lib/supabase";
-import { Button, Chip, Input, Slider } from "@rneui/themed";
 import { router, useRouter } from "expo-router";
 import { User } from "@supabase/supabase-js";
 import {
@@ -25,17 +22,26 @@ import {
   CreationText,
 } from "@/components/Inputs/Creation";
 import { Answer, Interest, Question } from "@/typings";
-import MediaUpload from "@/components/MediaUpload";
+import MediaUpload, { uploadImage } from "@/components/MediaUpload";
+import { Button } from "@tamagui/button";
+import { Text, useTheme, View } from "@tamagui/core";
+import { useAuth } from "@/components/AuthProvider";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
+export interface ImageObject {
+  uri: string;
+  order: number;
+}
+
 const CreateScreen = () => {
-  const [user, setUser] = useState<User | null>(null);
+  // const [user, setUser] = useState<User | null>(null);
+  const { session } = useAuth();
   const [interests, setInterests] = useState<Interest[]>([]);
+
+  const theme = useTheme();
+
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
     supabase
       .from("interest_registry")
       .select()
@@ -111,10 +117,7 @@ const CreateScreen = () => {
   const [currentInput, setCurrentInput] = useState("");
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [sliderValue, setSliderValue] = useState(0);
-  const [uploadedImages, setUploadedImages] = useState<{
-    files: string[];
-    imageUris: string[];
-  }>({ files: [], imageUris: [] });
+  const [uploadedImages, setUploadedImages] = useState<ImageObject[]>([]);
 
   // Maintain original slide animation
   useEffect(() => {
@@ -126,6 +129,46 @@ const CreateScreen = () => {
       speed: 12,
     }).start();
   }, [questionIndex]);
+
+  const loadImages = useCallback(async () => {
+    try {
+      const images = await supabase.storage
+        .from("profile-images")
+        .list(session?.user?.id || "");
+
+      if (images.error) {
+        console.error("Error loading images:", images.error);
+        return;
+      }
+
+      const newImages = await Promise.all(
+        images.data.map(async (item) => {
+          const { data } = await supabase.storage
+            .from("profile-images")
+            .getPublicUrl(`${session?.user.id}/${item.name}`);
+
+          // Extract order from filename
+          const order = parseInt(item.name.split(".")[0]);
+
+          return {
+            uri: data.publicUrl,
+            order: order,
+          };
+        })
+      );
+
+      // Sort images by order
+      const sortedImages = newImages.sort((a, b) => a.order - b.order);
+
+      setUploadedImages(sortedImages);
+    } catch (error) {
+      console.error("Image loading error:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadImages();
+  }, []);
 
   // Render question based on type (similar to original)
   const renderInput = useCallback(
@@ -158,43 +201,28 @@ const CreateScreen = () => {
         case "media":
           return (
             <MediaUpload
-              images={uploadedImages.imageUris}
-              onUpload={(files, uris) => {
-                setUploadedImages({ files, imageUris: uris });
-                setAnswers((prev) => ({
-                  ...prev,
-                  [question.key]: {
-                    value: {
-                      files,
-                      imageUris: uris,
-                    },
-                    skipped: false,
-                  },
-                }));
-              }}
-              onDelete={(index) => {
-                const updatedFiles = [...uploadedImages.files];
-                const updatedUris = [...uploadedImages.imageUris];
+              images={uploadedImages}
+              onLoad={loadImages}
+              onUpload={(image: ImageObject) => {
+                setUploadedImages((prev) => {
+                  const newImages = [...prev];
+                  const existingIndex = newImages.findIndex(
+                    (img) => img.order === image.order
+                  );
 
-                updatedFiles.splice(index, 1);
-                updatedUris.splice(index, 1);
+                  if (existingIndex !== -1) {
+                    newImages[existingIndex] = image;
+                  } else {
+                    newImages.push(image);
+                  }
 
-                setUploadedImages({
-                  files: updatedFiles,
-                  imageUris: updatedUris,
+                  return newImages;
                 });
-
-                // Update answers to reflect deleted image
-                setAnswers((prev) => ({
-                  ...prev,
-                  [question.key]: {
-                    value: {
-                      files: updatedFiles,
-                      imageUris: updatedUris,
-                    },
-                    skipped: updatedFiles.length === 0,
-                  },
-                }));
+              }}
+              onDelete={(image: ImageObject) => {
+                setUploadedImages((prev) =>
+                  prev.filter((img) => img.order !== image.order)
+                );
               }}
             />
           );
@@ -219,9 +247,10 @@ const CreateScreen = () => {
       return false;
     }
 
+    let error = false;
     try {
       setSubmittingData(true);
-      console.log("Final answers:", finalAnswers); // Debugging to ensure all answers exist
+
       for (const [key, answer] of Object.entries(finalAnswers)) {
         if (answer.skipped) continue;
 
@@ -229,7 +258,11 @@ const CreateScreen = () => {
         if (!question || !question.options) continue;
 
         const { dbTable, dbColumn, dbIdentifier } = question.options;
-        if (!dbTable || !dbColumn || !dbIdentifier) continue;
+        if (
+          question.type !== "media" &&
+          (!dbTable || !dbColumn || !dbIdentifier)
+        )
+          continue;
 
         if (question.type === "multi-select") {
           const selectedValues = answer.value as string[];
@@ -247,14 +280,11 @@ const CreateScreen = () => {
             }
           }
         } else if (question.type === "media") {
-          // Handle media uploads separately
-          const mediaAnswer = answer.value as {
-            files: string[];
-            imageUris: string[];
-          };
-          // You might want to implement specific logic for uploading images here
-          // This could involve uploading to Supabase storage and storing file paths
-          console.log("Media files to upload:", mediaAnswer.files);
+          const images = answer.value as unknown as ImageObject[];
+
+          images.forEach((image: ImageObject) => {
+            uploadImage(session, image);
+          });
         } else {
           const updateData = { [dbColumn]: answer.value };
           const { error } = await supabase
@@ -268,31 +298,42 @@ const CreateScreen = () => {
         }
       }
 
-      setSubmittingData(false);
       return true;
     } catch (error) {
-      console.error("Profile update failed:", error);
-      setSubmittingData(false);
+      error = true;
       supabase.auth.signOut();
       return false;
+    } finally {
+      if (error) return;
+
+      const { error: error2 } = await supabase
+        .from("profiles")
+        .update({ created: true })
+        .eq("id", user.id);
+
+      if (error2) {
+        console.error("Error updating profile:", error2);
+      }
+
+      setSubmittingData(false);
     }
   };
 
   // Maintain original submission logic
   const submitAnswers = useCallback(
     async (finalAnswers: Record<string, Answer>) => {
-      if (!user) {
+      if (!session || !session.user) {
         console.error("No user found");
         return;
       }
-      const success = await updateProfile(user, finalAnswers);
+      const success = await updateProfile(session.user, finalAnswers);
       if (success) {
         router.replace("/(tabs)");
       } else {
         console.error("Failed to update profile");
       }
     },
-    [router, user]
+    [router, session]
   );
 
   const skipQuestion = useCallback(() => {
@@ -324,17 +365,28 @@ const CreateScreen = () => {
     // Reset input states
     setCurrentInput("");
     setSelectedOptions([]);
-    setUploadedImages({ files: [], imageUris: [] });
+    setUploadedImages([]);
   }, [questions, questionIndex, submitAnswers]);
 
   // Improved continue button logic
   const continueButtonPressed = useCallback(() => {
+    const disabled =
+      submittingData ||
+      (questions[questionIndex].type === "text" && !currentInput) ||
+      (questions[questionIndex].type === "multi-select" &&
+        selectedOptions.length === 0) ||
+      (questions[questionIndex].type === "media" && uploadedImages.length === 0)
+        ? true
+        : false;
+
+    if (disabled) return;
+
     const currentQuestion = questions[questionIndex];
     const currentValue =
       currentQuestion.type === "text"
         ? currentInput
         : currentQuestion.type === "slider"
-        ? sliderValue
+        ? Number(sliderValue)
         : currentQuestion.type === "media"
         ? uploadedImages
         : selectedOptions;
@@ -346,8 +398,10 @@ const CreateScreen = () => {
           value: currentValue,
           skipped:
             currentQuestion.type === "media"
-              ? uploadedImages.files.length === 0
-              : currentValue.length === 0,
+              ? uploadedImages.length === 0
+              : currentQuestion.type === "slider"
+              ? currentValue === 0
+              : (currentValue as string | string[]).length === 0,
         },
       };
 
@@ -364,7 +418,7 @@ const CreateScreen = () => {
     setCurrentInput("");
     setSelectedOptions([]);
     setSliderValue(0);
-    setUploadedImages({ files: [], imageUris: [] });
+    setUploadedImages([]);
   }, [
     questions,
     questionIndex,
@@ -381,9 +435,9 @@ const CreateScreen = () => {
 
   return (
     <View
+      bg={"$background"}
       style={{
         flex: 1,
-        backgroundColor: TailwindColours.background.primary,
       }}
     >
       <View
@@ -429,7 +483,7 @@ const CreateScreen = () => {
                     <MaterialIcons
                       name="arrow-back-ios-new"
                       size={32}
-                      color={TailwindColours.text.muted}
+                      color={theme.color11.val}
                     />
                   </View>
                 </TouchableOpacity>
@@ -439,16 +493,14 @@ const CreateScreen = () => {
                     <MaterialIcons
                       name="close"
                       size={40}
-                      color={TailwindColours.text.muted}
+                      color={theme.color11.val}
                     />
                   </View>
                 </TouchableOpacity>
               )}
               {questions[questionIndex].skipable && (
                 <TouchableOpacity activeOpacity={0.9} onPress={skipQuestion}>
-                  <Text style={{ color: TailwindColours.text.muted }}>
-                    Skip
-                  </Text>
+                  <Text color={"$color11"}>Skip</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -478,7 +530,7 @@ const CreateScreen = () => {
                 </Text>
                 <Text
                   style={{
-                    color: TailwindColours.text.muted,
+                    color: theme.color11.val,
                     fontSize: 14,
                     padding: 0,
                     margin: 0,
@@ -495,21 +547,26 @@ const CreateScreen = () => {
           <View
             style={{
               paddingVertical: 16,
-              backgroundColor: TailwindColours.background.primary,
             }}
           >
             <Button
               onPress={continueButtonPressed}
-              title={"Continue"}
-              disabled={
+              opacity={
                 submittingData ||
                 (questions[questionIndex].type === "text" && !currentInput) ||
                 (questions[questionIndex].type === "multi-select" &&
                   selectedOptions.length === 0) ||
                 (questions[questionIndex].type === "media" &&
-                  uploadedImages.files.length === 0)
+                  uploadedImages.length === 0)
+                  ? 0.5
+                  : 1
               }
-            />
+            >
+              {"Continue"}
+            </Button>
+            {/* <Button
+              title={"Continue"}
+            /> */}
           </View>
         </View>
       )}
