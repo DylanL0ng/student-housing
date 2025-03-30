@@ -1,0 +1,44 @@
+
+[functions.getProfiles]
+enabled = true
+verify_jwt = true
+import_map = "./functions/getProfiles/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/getProfiles/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/getProfiles/*.html" ]
+
+[functions.getUserProfiles]
+enabled = true
+verify_jwt = true
+import_map = "./functions/getUserProfiles/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/getUserProfiles/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/getUserProfiles/*.html" ]
+
+[functions.fetch-connections]
+enabled = true
+verify_jwt = true
+import_map = "./functions/fetch-connections/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/fetch-connections/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/fetch-connections/*.html" ]
+
+[functions.get_profile_data]
+enabled = true
+verify_jwt = true
+import_map = "./functions/get_profile_data/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/get_profile_data/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/get_profile_data/*.html" ]

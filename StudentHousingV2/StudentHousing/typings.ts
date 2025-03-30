@@ -1,3 +1,9 @@
+export interface Relationship {
+  id: string;
+  interacted: boolean;
+  type: "friend" | "accommodation";
+}
+
 export interface User {
   id: string;
   name: string;
@@ -5,19 +11,17 @@ export interface User {
   profile: Profile;
 }
 
-export interface Relationship {
-  id: string;
-  interacted: boolean;
-  type: "friend" | "accommodation";
-}
-
 export interface Profile {
   id: string;
+  type: string;
   title: string;
   interests: string[];
-  location: string;
+  location: {
+    city: string;
+    point: { longitude: number; latitude: number };
+    distance?: number;
+  };
   media: string[];
-  thumbnail?: string;
 }
 
 export interface Message {
@@ -29,14 +33,19 @@ export interface Message {
 }
 
 export interface Conversation {
-  messages: Message[];
+  latest_message: string;
   profile: Profile;
   id: string;
 }
 
 export interface TextMessageProps {
-  sender: string;
   content: string;
+  sender_id: string;
+  conversation_id: string;
+  status: "sending" | "delivered";
+  sender: boolean;
+  message_id?: string;
+  created_at?: string;
 }
 
 // Types from the original file

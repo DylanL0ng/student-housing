@@ -2,10 +2,14 @@ import { router } from "expo-router";
 import React, { useEffect } from "react";
 import supabase from "./lib/supabase";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
-// import { useAuth } from "../AuthProvider";
+import generateFakeUsers from "@/scripts/generateFakeUsers";
 
 const Routing = () => {
   const { session, loading } = useAuth();
+
+  // useEffect(() => {
+  //   generateFakeUsers(5);
+  // }, []);
 
   useEffect(() => {
     if (!loading) {

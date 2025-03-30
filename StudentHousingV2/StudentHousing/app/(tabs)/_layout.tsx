@@ -18,29 +18,27 @@ import { useTheme, View } from "@tamagui/core";
 import { useEffect } from "react";
 
 export default function TabLayout() {
-  const theme = useTheme(); // Get current theme colors
-
-  // useEffect(() => {})
+  const theme = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: "rgba(0, 0, 0, 0)",
-          paddingBlock: 8,
+          borderTopWidth: 0,
           height: 60,
-          borderWidth: 0,
-          boxShadow: "0",
-          elevation: 0, // Android shadow removal
-          shadowOpacity: 0, // iOS shadow removal
         },
+        tabBarBackground: () => (
+          <View
+            bg={"$color2"}
+            style={{ position: "absolute", inset: 0 }}
+          ></View>
+        ),
 
         tabBarButton: (props) => <Pressable {...props} />,
         tabBarIconStyle: {
           color: TailwindColours.text.muted,
         },
         tabBarLabelStyle: {
-          // marginTop: 2,
           color: TailwindColours.text.muted,
         },
         tabBarActiveTintColor: theme.color11.val,

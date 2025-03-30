@@ -4,7 +4,6 @@ import { FontAwesome } from "@expo/vector-icons";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
-// import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Text, useTheme, View } from "@tamagui/core";

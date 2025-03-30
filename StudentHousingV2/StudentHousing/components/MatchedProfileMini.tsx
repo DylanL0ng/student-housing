@@ -1,4 +1,3 @@
-// cimport { Conversations } from "@/constants/Users";
 import { User } from "@/typings";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, useNavigation, useRouter } from "expo-router";
@@ -9,14 +8,12 @@ import { Text, View } from "@tamagui/core";
 
 const MatchedProfileMini = (props: User) => {
   const router = useRouter();
-
+  console.log(props);
   const openConversation = async () => {
-    // Fetch conversation id
     router.push({
       pathname: "/message_thread",
       params: {
-        conversationId: props.id + ":conversation",
-        target: JSON.stringify(props),
+        conversationId: props.user_id,
       },
     });
   };
@@ -27,7 +24,7 @@ const MatchedProfileMini = (props: User) => {
         <Image
           style={styles.inset}
           source={{
-            uri: "https://media.istockphoto.com/id/1384892916/photo/young-teenager-taking-a-selfie-with-smartphone-in-a-city-park.jpg?s=2048x2048&w=is&k=20&c=kMTTX7I6CcKVpre2UQXojPVM9_CUja__m6wW3piFq0s=",
+            uri: props.profile.media[0],
           }}
         />
         <LinearGradient

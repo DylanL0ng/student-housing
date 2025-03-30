@@ -8,23 +8,18 @@ import {
   Text,
 } from "react-native";
 
-interface Props<T extends Record<string, unknown>> {
+interface Props<T extends Record<string, unknown> & { id: string | number }> {
   Card: React.ComponentType<T>;
   data: T[];
-  onSwipeRight: () => void;
-  onSwipeLeft: () => void;
-  requestUpdate: () => Promise<any[]>;
+  onSwipeRight: (data: { index: number; data: T }) => void;
+  onSwipeLeft: (data: { index: number; data: T }) => void;
+  requestUpdate: () => void;
   style?: object;
 }
 
-export default function SwipeHandler<T extends Record<string, unknown>>({
-  Card,
-  data,
-  onSwipeRight,
-  onSwipeLeft,
-  requestUpdate,
-  style,
-}: Props<T>) {
+export default function SwipeHandler<
+  T extends Record<string, unknown> & { id: string | number }
+>({ Card, data, onSwipeRight, onSwipeLeft, requestUpdate, style }: Props<T>) {
   const pan = useRef(new Animated.ValueXY()).current;
   const [curIndex, setCurIndex] = useState(0);
   const [currentData, setCurrentData] = useState(data);
@@ -32,7 +27,12 @@ export default function SwipeHandler<T extends Record<string, unknown>>({
 
   useEffect(() => {
     setCurrentData(data);
+    setCurIndex(0);
   }, [data]);
+
+  useEffect(() => {
+    if (!currentData[curIndex]) requestUpdate();
+  }, [curIndex]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -52,17 +52,26 @@ export default function SwipeHandler<T extends Record<string, unknown>>({
             duration: 200,
             useNativeDriver: false,
           }).start(() => {
+            let leftSwipe = true;
             if (dx > 0) {
-              onSwipeRight();
+              leftSwipe = false;
             } else {
-              onSwipeLeft();
+              leftSwipe = true;
             }
 
-            requestUpdate().then((newUsers) => {
-              setCurrentData((prevData) => [...prevData, ...newUsers]);
+            setCurIndex((prevIndex) => {
+              const newIndex = prevIndex + 1;
+              const data = {
+                index: prevIndex,
+                data: currentData[curIndex],
+              };
+
+              if (leftSwipe) onSwipeLeft(data);
+              else onSwipeRight(data);
+
+              return newIndex;
             });
 
-            setCurIndex((prevIndex) => prevIndex + 1);
             pan.setValue({ x: 0, y: 0 });
           });
         } else {
@@ -88,11 +97,6 @@ export default function SwipeHandler<T extends Record<string, unknown>>({
           }),
         },
       ],
-      opacity: pan.x.interpolate({
-        inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
-        outputRange: [0.8, 1, 0.8],
-        extrapolate: "clamp",
-      }),
       zIndex: 1,
     };
 

@@ -14,7 +14,6 @@ const calculateAge = (timestamptz: string) => {
 
   let age = today.getFullYear() - birthDate.getFullYear();
 
-  // Adjust age if the birthday hasn't occurred this year yet
   const isBeforeBirthdayThisYear =
     today.getMonth() < birthDate.getMonth() ||
     (today.getMonth() === birthDate.getMonth() &&
@@ -28,7 +27,6 @@ const calculateAge = (timestamptz: string) => {
 };
 
 const ProfileCard = ({ profile }: { profile: Profile }) => {
-  // const [age, setAge] = useState(calculateAge(profile?.date_of_birth));
   return (
     <View style={styles.body}>
       <View style={styles.float}>
@@ -49,18 +47,18 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
             alignItems: "flex-start",
           }}
         >
-          <View style={styles.personalInfoEntryWrapper}>
+          {/* <View style={styles.personalInfoEntryWrapper}>
             <Text>
               <MaterialIcons name="savings" color={"#e5e7eb"} size={18} />
             </Text>
             <Text style={styles.personalInfoEntryText}>€750</Text>
-          </View>
+          </View> */}
           <View style={styles.personalInfoEntryWrapper}>
             <Text>
               <Entypo name="location-pin" color={"#e5e7eb"} size={32} />
             </Text>
             <Text style={styles.personalInfoLocationText}>
-              Dublin - 2 kms away
+              {profile.location.city} - {profile.location.distance} km away
             </Text>
           </View>
         </View>
