@@ -119,7 +119,7 @@ export default function HomeScreen() {
         bg={"$background"}
         style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
       >
-        <Text>Loading...</Text>
+        <Text color={"$color"}>Loading...</Text>
       </View>
     );
   }

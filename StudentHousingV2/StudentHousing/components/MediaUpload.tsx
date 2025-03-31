@@ -62,7 +62,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
   useEffect(() => {
     onLoad();
-  }, [onLoad]);
+  }, []);
 
   const handleImagePick = useCallback(
     async (order: number) => {

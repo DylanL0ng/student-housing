@@ -16,7 +16,7 @@ import supabase from "./lib/supabase";
 
 import * as Location from "expo-location";
 
-import { TamaguiProvider, createTamagui } from "@tamagui/core";
+import { TamaguiProvider, createTamagui, useTheme } from "@tamagui/core";
 import { defaultConfig } from "@tamagui/config/v4";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { Session } from "@supabase/supabase-js";
@@ -38,6 +38,7 @@ declare module "@tamagui/core" {
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const colorScheme = useColorScheme();
+  // const theme = useTheme();
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
@@ -132,12 +133,12 @@ export default function RootLayout() {
       <TamaguiProvider config={config} defaultTheme="dark">
         <Stack
           screenOptions={{
-            header: ({ route, options }) => {
-              return <Header page={options.title || route.name} />;
+            headerStyle: {
+              backgroundColor: "hsla(0, 0%, 100%, 0.1)",
             },
           }}
         >
-          <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
+          <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(modals)" options={{ presentation: "modal" }} />
           <Stack.Screen name="+not-found" />
         </Stack>
@@ -145,23 +146,4 @@ export default function RootLayout() {
       </TamaguiProvider>
     </AuthProvider>
   );
-}
-
-{
-  /* <Stack
-screenOptions={{
-  header: ({ route, options }) => {
-    return <Header page={options.title || route.name} />;
-  },
-}}
->
-<Stack.Screen
-  name="(tabs)"
-  options={{
-    headerShown: true,
-  }}
-/>
-<Stack.Screen name="+not-found" />
-</Stack>
-</Provider> */
 }

@@ -1,45 +1,29 @@
-import TailwindColours from "@/constants/TailwindColours";
+import React, { useRef, useEffect, useState, useCallback } from "react";
+import { TouchableOpacity, Animated, Dimensions } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import React, {
-  useRef,
-  useEffect,
-  useState,
-  useCallback,
-  useMemo,
-} from "react";
-import {
-  TouchableOpacity,
-  Animated,
-  Dimensions,
-  ScrollView,
-} from "react-native";
-import supabase from "../lib/supabase";
-import { router, useRouter } from "expo-router";
+import { router } from "expo-router";
 import { User } from "@supabase/supabase-js";
-import {
-  CreationMultiSelect,
-  CreationSlider,
-  CreationText,
-} from "@/components/Inputs/Creation";
-import { Answer, Interest, Question } from "@/typings";
-import MediaUpload, { uploadImage } from "@/components/MediaUpload";
 import { Button } from "@tamagui/button";
 import { Text, useTheme, View } from "@tamagui/core";
+
+import supabase from "../lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
+
+import { uploadImage } from "@/components/MediaUpload";
+import { Question, Answer, Interest, ImageObject } from "@/typings";
+import { CreationInputFactory } from "@/components/Inputs/Creation";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-export interface ImageObject {
-  uri: string;
-  order: number;
-}
-
 const CreateScreen = () => {
-  // const [user, setUser] = useState<User | null>(null);
   const { session } = useAuth();
   const [interests, setInterests] = useState<Interest[]>([]);
-
   const theme = useTheme();
+
+  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [submittingData, setSubmittingData] = useState(false);
 
   useEffect(() => {
     supabase
@@ -54,51 +38,100 @@ const CreateScreen = () => {
       });
   }, []);
 
-  // Define questions as a useMemo to maintain referential stability
-  const questions = useMemo<Question[]>(
+  const [textInput, setTextInput] = useState("");
+  const [multiSelectInput, setMultiSelectInput] = useState<string[]>([]);
+  const [sliderInput, setSliderInput] = useState(0);
+  const [dateInput, setDateInput] = useState<Date>(new Date());
+  const [mediaInput, setMediaInput] = useState<ImageObject[]>([]);
+
+  const inputState = {
+    text: [textInput, setTextInput],
+    multiSelect: [multiSelectInput, setMultiSelectInput],
+    slider: [sliderInput, setSliderInput],
+    date: [dateInput, setDateInput],
+    media: [mediaInput, setMediaInput],
+  };
+
+  const questions = useCallback(
     () => [
       {
         title: "My name is...",
         description: "This is how people will know you",
-        type: "text",
+        type: "text" as const,
         options: {
           placeholder: "Your name",
-          dbTable: "profiles",
-          dbColumn: "full_name",
-          dbIdentifier: "id",
+        },
+        db: {
+          table: "profiles",
+          column: "full_name",
+          identifier: "id",
         },
         key: "name",
+        skipable: false,
+      },
+      {
+        title: "My favourite thing to do is...",
+        description: "",
+        type: "text" as const,
+        options: {
+          placeholder: "Your favourite thing to do",
+        },
+        db: {
+          table: "profiles",
+          column: "favorite_activity",
+          identifier: "id",
+        },
+        key: "activity",
+        skipable: false,
+      },
+      {
+        title: "My age is...",
+        description: "When were you born",
+        type: "date" as const,
+        options: {},
+        db: {
+          table: "profiles",
+          column: "date_of_birth",
+          identifier: "id",
+        },
+        key: "dob",
+        skipable: false,
       },
       {
         title: "I am interested in...",
-        description: "This is how people will know you",
-        type: "multi-select",
+        description: "Select your interests",
+        type: "multiSelect" as const,
         key: "interests",
         options: {
           values: interests,
-          dbTable: "profile_interests", // Table for many-to-many relationship
-          dbColumn: "interest_id",
-          dbIdentifier: "user_id",
+        },
+        db: {
+          table: "profile_interests",
+          column: "interest_id",
+          identifier: "user_id",
         },
         skipable: true,
       },
       {
         title: "My budget is...",
-        description: "This is how people will know you",
-        type: "slider",
+        description: "Set your monthly budget",
+        type: "slider" as const,
         key: "budget",
         options: {
           range: [0, 20000, 1],
-          dbTable: "profiles",
-          dbColumn: "budget",
-          dbIdentifier: "id",
+          value: 0,
+        },
+        db: {
+          table: "profiles",
+          column: "budget",
+          identifier: "id",
         },
         skipable: true,
       },
       {
         title: "Photos...",
-        description: "This is how people will know you",
-        type: "media",
+        description: "Upload your profile photos",
+        type: "media" as const,
         key: "profile-images",
         options: {
           bucket: "profile-images",
@@ -109,17 +142,15 @@ const CreateScreen = () => {
     [interests]
   );
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, Answer>>({});
-  const [submittingData, setSubmittingData] = useState(false);
+  const backButtonPressed = useCallback(() => {
+    setQuestionIndex((prevIndex) => prevIndex - 1);
+  }, []);
+  const cancelButtonPressed = useCallback(() => {
+    supabase.auth.signOut();
+    router.replace("/auth/login");
+  }, []);
 
-  const [currentInput, setCurrentInput] = useState("");
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [sliderValue, setSliderValue] = useState(0);
-  const [uploadedImages, setUploadedImages] = useState<ImageObject[]>([]);
-
-  // Maintain original slide animation
+  // Slide animation effect
   useEffect(() => {
     slideAnim.setValue(SCREEN_WIDTH);
     Animated.spring(slideAnim, {
@@ -128,333 +159,88 @@ const CreateScreen = () => {
       bounciness: 8,
       speed: 12,
     }).start();
-  }, [questionIndex]);
+  }, [questionIndex, slideAnim]);
 
-  const loadImages = useCallback(async () => {
-    try {
-      const images = await supabase.storage
-        .from("profile-images")
-        .list(session?.user?.id || "");
+  const [answers, setAnswers] = useState({});
 
-      if (images.error) {
-        console.error("Error loading images:", images.error);
-        return;
-      }
-
-      const newImages = await Promise.all(
-        images.data.map(async (item) => {
-          const { data } = await supabase.storage
-            .from("profile-images")
-            .getPublicUrl(`${session?.user.id}/${item.name}`);
-
-          // Extract order from filename
-          const order = parseInt(item.name.split(".")[0]);
-
-          return {
-            uri: data.publicUrl,
-            order: order,
-          };
-        })
-      );
-
-      // Sort images by order
-      const sortedImages = newImages.sort((a, b) => a.order - b.order);
-
-      setUploadedImages(sortedImages);
-    } catch (error) {
-      console.error("Image loading error:", error);
+  const resetInputState = useCallback((type) => {
+    switch (type) {
+      case "text":
+        setTextInput("");
+        break;
+      case "multiSelect":
+        setMultiSelectInput([]);
+        break;
+      case "slider":
+        setSliderInput(0);
+        break;
+      case "date":
+        setDateInput(new Date());
+        break;
+      case "media":
+        setMediaInput([]);
+        break;
     }
   }, []);
 
-  useEffect(() => {
-    loadImages();
-  }, []);
-
-  // Render question based on type (similar to original)
-  const renderInput = useCallback(
-    (question: Question) => {
-      switch (question.type) {
-        case "text":
-          return (
-            <CreationText
-              question={question}
-              value={currentInput}
-              onValueChange={setCurrentInput}
-            />
-          );
-        case "multi-select":
-          return (
-            <CreationMultiSelect
-              question={question}
-              value={selectedOptions}
-              onValueChange={setSelectedOptions}
-            />
-          );
-        case "slider":
-          return (
-            <CreationSlider
-              question={question}
-              value={sliderValue}
-              onValueChange={setSliderValue}
-            />
-          );
-        case "media":
-          return (
-            <MediaUpload
-              images={uploadedImages}
-              onLoad={loadImages}
-              onUpload={(image: ImageObject) => {
-                setUploadedImages((prev) => {
-                  const newImages = [...prev];
-                  const existingIndex = newImages.findIndex(
-                    (img) => img.order === image.order
-                  );
-
-                  if (existingIndex !== -1) {
-                    newImages[existingIndex] = image;
-                  } else {
-                    newImages.push(image);
-                  }
-
-                  return newImages;
-                });
-              }}
-              onDelete={(image: ImageObject) => {
-                setUploadedImages((prev) =>
-                  prev.filter((img) => img.order !== image.order)
-                );
-              }}
-            />
-          );
-        default:
-          return <View />;
-      }
-    },
-    [currentInput, selectedOptions, sliderValue, uploadedImages]
-  );
-
-  // Improved cancel and skip logic
-  const cancelCreation = useCallback(() => {
-    supabase.auth.signOut();
-  }, []);
-
-  const updateProfile = async (
-    user: User,
-    finalAnswers: Record<string, Answer>
-  ) => {
-    if (!user) {
-      console.error("No user found");
-      return false;
-    }
-
-    let error = false;
-    try {
-      setSubmittingData(true);
-
-      for (const [key, answer] of Object.entries(finalAnswers)) {
-        if (answer.skipped) continue;
-
-        const question = questions.find((q) => q.key === key);
-        if (!question || !question.options) continue;
-
-        const { dbTable, dbColumn, dbIdentifier } = question.options;
-        if (
-          question.type !== "media" &&
-          (!dbTable || !dbColumn || !dbIdentifier)
-        )
-          continue;
-
-        if (question.type === "multi-select") {
-          const selectedValues = answer.value as string[];
-          if (selectedValues.length > 0) {
-            await supabase.from(dbTable).delete().eq(dbIdentifier, user.id);
-            const { error: insertError } = await supabase.from(dbTable).insert(
-              selectedValues.map((selectedId) => ({
-                [dbIdentifier]: user.id,
-                [dbColumn]: selectedId,
-              }))
-            );
-            if (insertError) {
-              console.error(`Error inserting into ${dbTable}:`, insertError);
-              supabase.auth.signOut();
-            }
-          }
-        } else if (question.type === "media") {
-          const images = answer.value as unknown as ImageObject[];
-
-          images.forEach((image: ImageObject) => {
-            uploadImage(session, image);
-          });
-        } else {
-          const updateData = { [dbColumn]: answer.value };
-          const { error } = await supabase
-            .from(dbTable)
-            .update(updateData)
-            .eq(dbIdentifier, user.id);
-          if (error) {
-            console.error(`Error updating ${dbTable}:`, error);
-            supabase.auth.signOut();
-          }
-        }
-      }
-
-      return true;
-    } catch (error) {
-      error = true;
-      supabase.auth.signOut();
-      return false;
-    } finally {
-      if (error) return;
-
-      const { error: error2 } = await supabase
-        .from("profiles")
-        .update({ created: true })
-        .eq("id", user.id);
-
-      if (error2) {
-        console.error("Error updating profile:", error2);
-      }
-
-      setSubmittingData(false);
-    }
-  };
-
-  // Maintain original submission logic
-  const submitAnswers = useCallback(
-    async (finalAnswers: Record<string, Answer>) => {
-      if (!session || !session.user) {
-        console.error("No user found");
-        return;
-      }
-      const success = await updateProfile(session.user, finalAnswers);
-      if (success) {
-        router.replace("/(tabs)");
-      } else {
-        console.error("Failed to update profile");
-      }
-    },
-    [router, session]
-  );
-
-  const skipQuestion = useCallback(() => {
-    const currentQuestion = questions[questionIndex];
-
-    setAnswers((prev) => {
-      const updatedAnswers = {
-        ...prev,
-        [currentQuestion.key]: {
-          value:
-            currentQuestion.type === "text"
-              ? ""
-              : currentQuestion.type === "media"
-              ? { files: [], imageUris: [] }
-              : [],
-          skipped: true,
-        },
-      };
-
-      if (questionIndex + 1 < questions.length) {
-        setQuestionIndex((prevIndex) => prevIndex + 1);
-      } else {
-        submitAnswers(updatedAnswers); // Ensure the latest answers are used
-      }
-
-      return updatedAnswers;
-    });
-
-    // Reset input states
-    setCurrentInput("");
-    setSelectedOptions([]);
-    setUploadedImages([]);
-  }, [questions, questionIndex, submitAnswers]);
-
-  // Improved continue button logic
   const continueButtonPressed = useCallback(() => {
-    const disabled =
-      submittingData ||
-      (questions[questionIndex].type === "text" && !currentInput) ||
-      (questions[questionIndex].type === "multi-select" &&
-        selectedOptions.length === 0) ||
-      (questions[questionIndex].type === "media" && uploadedImages.length === 0)
-        ? true
-        : false;
+    const currentQuestion = questions()[questionIndex];
 
-    if (disabled) return;
+    if (!currentQuestion) {
+      console.error("No current question found");
+      return;
+    }
 
-    const currentQuestion = questions[questionIndex];
-    const currentValue =
-      currentQuestion.type === "text"
-        ? currentInput
-        : currentQuestion.type === "slider"
-        ? Number(sliderValue)
-        : currentQuestion.type === "media"
-        ? uploadedImages
-        : selectedOptions;
+    if (!inputState[currentQuestion.type]) {
+      resetInputState(currentQuestion.type);
+      return console.error("State is empty or undefined");
+    }
 
-    setAnswers((prev) => {
-      const updatedAnswers = {
-        ...prev,
-        [currentQuestion.key]: {
-          value: currentValue,
-          skipped:
-            currentQuestion.type === "media"
-              ? uploadedImages.length === 0
-              : currentQuestion.type === "slider"
-              ? currentValue === 0
-              : (currentValue as string | string[]).length === 0,
-        },
-      };
+    const state = inputState[currentQuestion.type][0];
+    let newAnswer = {
+      ...answers,
+    };
+    if (!state) console.error("State is empty or undefined");
+    else newAnswer[currentQuestion.key] = state;
 
-      if (questionIndex + 1 < questions.length) {
-        setQuestionIndex((prevIndex) => prevIndex + 1);
-      } else {
-        submitAnswers(updatedAnswers);
-      }
+    setQuestionIndex((prevIndex) => prevIndex + 1);
+    resetInputState(currentQuestion.type);
+    setAnswers((prev) => newAnswer);
 
-      return updatedAnswers;
-    });
-
-    // Reset input states
-    setCurrentInput("");
-    setSelectedOptions([]);
-    setSliderValue(0);
-    setUploadedImages([]);
-  }, [
-    questions,
-    questionIndex,
-    currentInput,
-    selectedOptions,
-    sliderValue,
-    uploadedImages,
-    submitAnswers,
-  ]);
-
-  const backButtonPressed = useCallback(() => {
-    setQuestionIndex((prevIndex) => prevIndex - 1);
-  }, []);
+    if (questionIndex + 1 >= questions().length) {
+      console.log("Answers", newAnswer);
+      router.replace("/(tabs)");
+      // submit the data
+    }
+  }, [questionIndex, inputState, answers]);
 
   return (
     <View
-      bg={"$background"}
+      bg="$background"
       style={{
         flex: 1,
       }}
     >
-      <View
-        id="progress-bar"
-        style={{ width: "100%", backgroundColor: "black" }}
-      >
+      <View style={{ width: "100%", backgroundColor: "black" }}>
         <View
-          id="indicator"
           style={{
             height: 10,
-            width: `${((questionIndex + 1) / questions.length) * 100}%`,
+            width: `${((questionIndex + 1) / questions().length) * 100}%`,
             backgroundColor: "red",
           }}
-        ></View>
+        />
       </View>
+
       {submittingData ? (
-        <Text>Loading</Text>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Text>Saving your profile...</Text>
+        </View>
       ) : (
         <View
           style={{
@@ -465,108 +251,93 @@ const CreateScreen = () => {
             flexDirection: "column",
           }}
         >
-          <View style={{ flex: 1 }}>
-            <View
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                justifyContent: "space-between",
-                marginBottom: 16,
-              }}
-            >
-              {questionIndex > 0 ? (
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={backButtonPressed}
-                >
-                  <View id="close-button">
+          {questions()[questionIndex] && (
+            <View style={{ flex: 1 }}>
+              <View
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 16,
+                }}
+              >
+                {questionIndex > 0 ? (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={backButtonPressed}
+                  >
                     <MaterialIcons
                       name="arrow-back-ios-new"
                       size={32}
                       color={theme.color11.val}
                     />
-                  </View>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity activeOpacity={0.9} onPress={cancelCreation}>
-                  <View id="close-button">
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={cancelButtonPressed}
+                  >
                     <MaterialIcons
                       name="close"
                       size={40}
                       color={theme.color11.val}
                     />
-                  </View>
-                </TouchableOpacity>
-              )}
-              {questions[questionIndex].skipable && (
-                <TouchableOpacity activeOpacity={0.9} onPress={skipQuestion}>
-                  <Text color={"$color11"}>Skip</Text>
-                </TouchableOpacity>
-              )}
+                  </TouchableOpacity>
+                )}
+
+                {questions()[questionIndex].skipable && (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => console.log("Skip question")}
+                  >
+                    <Text color="$color11">Skip</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <Animated.View
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 16,
+                  marginBottom: 16,
+                  transform: [{ translateX: slideAnim }],
+                }}
+              >
+                <View style={{ display: "flex", gap: 8 }}>
+                  <Text
+                    style={{
+                      color: theme.color.val,
+                      fontSize: 24,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {questions()[questionIndex].title}
+                  </Text>
+                  <Text
+                    style={{
+                      color: theme.color11.val,
+                      fontSize: 14,
+                    }}
+                  >
+                    {questions()[questionIndex].description}
+                  </Text>
+                </View>
+
+                <View style={{ width: "100%" }}>
+                  <CreationInputFactory
+                    question={questions()[questionIndex]}
+                    inputState={inputState}
+                  />
+                </View>
+              </Animated.View>
             </View>
-            <Animated.View
-              id="input-group"
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 16,
-                marginBottom: 16,
-                transform: [
-                  {
-                    translateX: slideAnim,
-                  },
-                ],
-              }}
-            >
-              <View style={{ display: "flex", gap: 8 }}>
-                <Text
-                  style={{
-                    color: TailwindColours.text.primary,
-                    fontSize: 24,
-                    fontWeight: "bold",
-                  }}
-                >
-                  {questions[questionIndex].title}
-                </Text>
-                <Text
-                  style={{
-                    color: theme.color11.val,
-                    fontSize: 14,
-                    padding: 0,
-                    margin: 0,
-                  }}
-                >
-                  {questions[questionIndex].description}
-                </Text>
-              </View>
-              <View style={{ width: "100%" }}>
-                {renderInput(questions[questionIndex])}
-              </View>
-            </Animated.View>
-          </View>
-          <View
-            style={{
-              paddingVertical: 16,
-            }}
-          >
-            <Button
-              onPress={continueButtonPressed}
-              opacity={
-                submittingData ||
-                (questions[questionIndex].type === "text" && !currentInput) ||
-                (questions[questionIndex].type === "multi-select" &&
-                  selectedOptions.length === 0) ||
-                (questions[questionIndex].type === "media" &&
-                  uploadedImages.length === 0)
-                  ? 0.5
-                  : 1
-              }
-            >
-              {"Continue"}
+          )}
+
+          <View style={{ paddingVertical: 16 }}>
+            <Button onPress={continueButtonPressed} opacity={1}>
+              Continue
             </Button>
-            {/* <Button
-              title={"Continue"}
-            /> */}
           </View>
         </View>
       )}

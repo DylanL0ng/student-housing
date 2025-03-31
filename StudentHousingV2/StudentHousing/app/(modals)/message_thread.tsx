@@ -63,6 +63,10 @@ const Header: React.FC<{
       <Button
         circular={true}
         bg={"$color6"}
+        minW={"$2"}
+        minH={"$2"}
+        maxW={"$2"}
+        maxH={"$2"}
         onPress={() => router.back()}
         style={styles.backButton}
       >
@@ -82,10 +86,18 @@ const Header: React.FC<{
           <Text color={"$white8"}>Added today!</Text>
         </View>
       </View>
-      <Button circular={true} bg={"$color6"} style={styles.menuButton}>
+      <Button
+        circular={true}
+        bg={"$color6"}
+        minW={"$2"}
+        minH={"$2"}
+        maxW={"$2"}
+        maxH={"$2"}
+        style={styles.menuButton}
+      >
         <Entypo
           name="dots-three-horizontal"
-          size={20}
+          size={14}
           color={theme.white9.val}
         />
       </Button>

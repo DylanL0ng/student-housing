@@ -1,3 +1,5 @@
+import { D } from "@faker-js/faker/dist/airline-CBNP41sR";
+
 export interface Relationship {
   id: string;
   interacted: boolean;
@@ -48,41 +50,76 @@ export interface TextMessageProps {
   created_at?: string;
 }
 
-// Types from the original file
-export type Interest = {
-  id: string;
-  interest: string;
-};
-
-export type QuestionOption = {
-  placeholder?: string;
-  values?: any;
-  dbTable?: string;
-  dbColumn?: string;
-  dbIdentifier?: string;
-  range?: [number, number, number?];
-};
-
-export type Question = {
-  title: string;
-  description: string;
-  type: "text" | "multi-select" | "slider" | "media";
-  key: string;
-  options?: QuestionOption;
-  skipable?: boolean;
-};
-
-// Updated type to include skipped information
-export type Answer = {
-  value: string | string[] | number;
-  skipped: boolean;
-};
+export interface CreationDateProps {
+  value?: Date | undefined;
+  question: {
+    type: string;
+    options?: any;
+  };
+  setter: (value: any) => void;
+}
 
 export interface CreationInputProps {
   question: {
     type: string;
-    options?: QuestionOption;
+    options?: any;
   };
+  setter: (value: any) => void;
   value: any;
-  onValueChange: (value: any) => void;
+}
+
+// types.ts
+export interface Interest {
+  id: string;
+  interest: string;
+}
+
+export interface Answer {
+  value: any;
+  skipped: boolean;
+}
+
+export interface SliderOptions {
+  range: [number, number, number]; // [min, max, step]
+  value: number;
+}
+
+export interface MediaOptions {
+  bucket: string;
+}
+
+export interface DatabaseOptions {
+  table: string;
+  column: string;
+  identifier: string;
+}
+
+export interface InputOptions {
+  placeholder: string;
+}
+
+export interface DateOptions {}
+
+export interface MultiSelectOptions {
+  values: any[];
+}
+
+export interface Question {
+  title: string;
+  description: string;
+  type: "text" | "multiSelect" | "slider" | "date" | "media";
+  key: string;
+  db?: DatabaseOptions;
+  options?:
+    | InputOptions
+    | DateOptions
+    | SliderOptions
+    | MediaOptions
+    | MultiSelectOptions;
+  skipable?: boolean;
+}
+
+export interface ImageObject {
+  uri: string;
+  order: number;
 }

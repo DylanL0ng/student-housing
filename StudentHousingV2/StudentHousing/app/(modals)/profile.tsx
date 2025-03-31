@@ -3,7 +3,7 @@ import { Profile as _Profile } from "@/typings";
 import { FontAwesome } from "@expo/vector-icons";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { Image, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Text, useTheme, View } from "@tamagui/core";
@@ -52,7 +52,27 @@ const Profile = () => {
             <FontAwesome color={theme.color11.val} name="close" />
           </Button>
         </View>
-        <ImageCollection media={media} />
+        <ScrollView
+          style={{
+            flex: 1,
+            flexDirection: "column",
+            backgroundColor: "red",
+          }}
+          horizontal={true}
+        >
+          {[...media, ...media].map((item: string, index: number) => (
+            <View key={index}>
+              <Image
+                style={{
+                  width: "100%",
+                  aspectRatio: 0.75,
+                }}
+                key={index}
+                source={{ uri: item }}
+              ></Image>
+            </View>
+          ))}
+        </ScrollView>
       </View>
     </SafeAreaView>
   );

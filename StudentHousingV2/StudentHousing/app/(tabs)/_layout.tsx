@@ -1,5 +1,5 @@
 import { Colors } from "@/constants/Colors";
-import { Tabs } from "expo-router";
+import { Tabs, useNavigation } from "expo-router";
 import {
   Platform,
   Pressable,
@@ -16,9 +16,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import TailwindColours from "@/constants/TailwindColours";
 import { useTheme, View } from "@tamagui/core";
 import { useEffect } from "react";
+import Header from "@/components/Header";
 
 export default function TabLayout() {
   const theme = useTheme();
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    navigation.setOptions({
+      header: () => <Header page="" />,
+    });
+  }, [navigation]);
 
   return (
     <Tabs

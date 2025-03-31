@@ -179,6 +179,7 @@ export default function MessagesScreen() {
   const renderRowItem = useCallback(({ item, index }: any) => {
     return (
       <View
+        // bg={"$color"}
         style={{
           marginHorizontal: index % 2 != 0 ? 4 : 0,
         }}
@@ -190,14 +191,18 @@ export default function MessagesScreen() {
 
   return (
     <SafeAreaView style={styles.flex}>
-      <View bg={"$background"} style={{ ...styles.flex, ...styles.container }}>
+      <View
+        bg={"$background"}
+        paddingBlock={"$2"}
+        style={{ ...styles.flex, ...styles.container }}
+      >
         <FlatList
           overScrollMode="never"
           ListHeaderComponent={
             <View>
               {unInteractedMatches.length > 0 && (
                 <Text color={"$color"} style={styles.text}>
-                  Potential Flatmates
+                  Connections
                 </Text>
               )}
               <FlatList
@@ -210,14 +215,22 @@ export default function MessagesScreen() {
               />
               {conversationHistory.length > 0 && (
                 <Text color={"$color"} style={{ ...styles.text, ...styles.mt }}>
-                  Conversations
+                  Messages
                 </Text>
               )}
             </View>
           }
           data={conversationHistory}
           renderItem={({ item, index }) => <ConversationMini {...item} />}
-          ItemSeparatorComponent={() => <View style={styles.seperator}></View>}
+          ItemSeparatorComponent={() => (
+            <View
+              bg={"$color02"}
+              opacity={0.05}
+              marginBlock={10}
+              borderWidth={1}
+              borderColor={"$color"}
+            ></View>
+          )}
           keyExtractor={(item, index) => index.toString()}
         />
       </View>

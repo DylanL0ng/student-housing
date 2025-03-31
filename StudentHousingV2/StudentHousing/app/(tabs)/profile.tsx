@@ -3,7 +3,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import supabase from "../lib/supabase";
 import MediaUpload, { ImageItem } from "@/components/MediaUpload";
 import { CreationSlider } from "@/components/Inputs/Creation";
-import { useNavigation } from "expo-router";
+import { router, useNavigation } from "expo-router";
+import DatePicker from "react-native-date-picker";
+import { Button } from "@tamagui/button";
 
 export default function ProfileScreen() {
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -65,29 +67,13 @@ export default function ProfileScreen() {
       <TouchableOpacity
         style={{ backgroundColor: "red" }}
         onPress={() => {
-          supabase.auth.signOut();
+          router.push("/auth/creation");
+          // console.log("LOGGING OUT");
+          // supabase.auth.signOut();
         }}
       >
         <Text>Logout</Text>
       </TouchableOpacity>
-      <CreationSlider
-        question={{
-          type: "slider",
-          options: {
-            range: [0, 20000, 1],
-            dbTable: "profiles",
-            dbColumn: "budget",
-            dbIdentifier: "id",
-          },
-        }}
-        value={0}
-        onValueChange={() => {}}
-      />
-      {/* <MediaUpload
-        images={images}
-        onUpload={handleUpload}
-        onDelete={handleDelete}
-      /> */}
     </View>
   );
 }

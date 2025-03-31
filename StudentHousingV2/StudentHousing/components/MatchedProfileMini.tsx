@@ -19,7 +19,7 @@ const MatchedProfileMini = (props: User) => {
   };
 
   return (
-    <TouchableOpacity onPress={openConversation} activeOpacity={0.75}>
+    <TouchableOpacity onPress={openConversation} activeOpacity={0.95}>
       <View style={styles.container}>
         <Image
           style={styles.inset}

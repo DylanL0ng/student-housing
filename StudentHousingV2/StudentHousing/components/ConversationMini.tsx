@@ -22,14 +22,21 @@ const ConversationMini = (conversation: User & Conversation) => {
     });
   };
 
+  // console.log(theme.color02.val);
+
   return (
-    <TouchableOpacity onPress={openConversation} activeOpacity={0.75}>
+    <TouchableOpacity onPress={openConversation} activeOpacity={0.95}>
       <View
-        bg={"$color2"}
+        // bg={}
+        // opacity={0.75}
+
         paddingInline={"$2"}
         paddingBlock={"$2"}
         rounded={"$2"}
-        style={styles.container}
+        style={{
+          ...styles.container,
+          ...{ backgroundColor: "hsla(0, 0%, 50%, 0.05)" },
+        }}
       >
         <View style={styles.profile}>
           <Image

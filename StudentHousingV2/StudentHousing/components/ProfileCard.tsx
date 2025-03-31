@@ -62,11 +62,23 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
             </Text>
           </View>
         </View>
-        <View style={{ display: "flex", flexDirection: "row", gap: 8 }}>
+        <View
+          style={{
+            display: "flex",
+            width: "100%",
+            overflow: "hidden",
+            // backgroundColor: "red",
+            flexDirection: "row",
+            gap: 8,
+          }}
+        >
           {profile.interests?.map((interest, index) => (
             <View
               key={index}
-              bg={"$yellow5"}
+              // boxSizing="content-box"
+              // bg={"$yellow5"}
+              borderWidth={"$1"}
+              borderColor={"$yellow5"}
               style={styles.personalInfoInterestsWrapper}
             >
               <Text style={styles.personalInfoInterestsText}>{interest}</Text>
@@ -123,10 +135,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   personalInfoEntryWrapper: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "flex-start",
     alignItems: "center",
     gap: 8,
+    // width: "100%",
+    flexWrap: "wrap",
   },
   personalInfoEntryText: {
     color: "#e5e7eb",

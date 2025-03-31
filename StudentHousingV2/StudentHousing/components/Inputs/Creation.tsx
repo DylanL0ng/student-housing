@@ -1,180 +1,119 @@
 import React, { useCallback } from "react";
-import { Text, ScrollView } from "react-native";
-import TailwindColours from "@/constants/TailwindColours";
-import { QuestionOption, Interest } from "@/typings";
+import { View } from "@tamagui/core";
+import { CreationText } from "./CreationText";
+import { CreationMultiSelect } from "./CreationMultiSelect";
+import { CreationSlider } from "./CreationSlider";
+import { CreationDate } from "./CreationDate";
+import MediaUpload, { deleteImage, uploadImage } from "../MediaUpload";
+import { Question, ImageObject } from "@/typings";
+import { useAuth } from "../AuthProvider";
+import supabase from "@/app/lib/supabase";
 
-import { Slider } from "@tamagui/slider";
-import { Input } from "@tamagui/input";
-import { Button } from "@tamagui/button";
-import { useTheme, View } from "@tamagui/core";
-
-interface CreationInputProps {
-  question: {
-    type: string;
-    options?: QuestionOption;
-  };
-  value: any;
-  onValueChange: (value: any) => void;
+interface InputState {
+  text: [string, (value: string) => void];
+  multiSelect: [string[], (value: string[]) => void];
+  slider: [number, (value: number) => void];
+  date: [Date, (value: Date) => void];
+  media: [ImageObject[], (value: ImageObject[]) => void];
 }
 
-export const CreationText = ({
-  question,
-  value,
-  onValueChange,
-}: CreationInputProps) => {
-  return (
-    <Input
-      value={value}
-      onChangeText={onValueChange}
-      placeholder={question.options?.placeholder}
-      placeholderTextColor="$color"
-      // placeholderTextColor=""
-      // placeholderTextColor={TailwindColours.text.muted}
-      // style={{
-      //   paddingInline: 16,
-      //   color: TailwindColours.text.primary,
-      //   backgroundColor: TailwindColours.background.secondary,
-      //   borderColor: TailwindColours.background.tertiary,
-      //   borderWidth: 2,
-      //   height: 48,
-      //   borderRadius: 8,
-      // }}
-    />
-  );
-};
-
-export const CreationMultiSelect = ({
-  question,
-  value,
-  onValueChange,
-}: CreationInputProps) => {
-  const selectOption = useCallback(
-    (interest_id: string) => {
-      const newSelectedOptions = value.includes(interest_id)
-        ? value.filter((i: string) => i !== interest_id)
-        : [...value, interest_id];
-      onValueChange(newSelectedOptions);
-    },
-    [value, onValueChange]
-  );
-
-  return (
-    <ScrollView
-      contentContainerStyle={{
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 8,
-        maxHeight: 500,
-      }}
-      showsVerticalScrollIndicator={true}
-      nestedScrollEnabled={true}
-    >
-      {question.options?.values?.map((interest: Interest, index: number) => (
-        <Button
-          key={index}
-          onPress={() => selectOption(interest.id)}
-          variant={value.includes(interest.id) ? undefined : "outlined"}
-        >
-          {interest.interest}
-        </Button>
-      ))}
-    </ScrollView>
-  );
-};
-
-export const CreationSlider = ({
-  question = { type: "slider", options: { range: [0, 20000, 1] } },
-  value = 0,
-  onValueChange = () => {},
-}: CreationInputProps) => {
-  const [min = 0, max = 20000, step = 1] = question.options?.range || [];
-  const theme = useTheme();
-
-  return (
-    <View
-      bg={"$background04"}
-      borderColor={"$borderColor"}
-      borderWidth={"$1"}
-      // borderradius={"$2"}
-      style={{
-        // borderWidth: 2,
-        // borderRadius: theme.$2,
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-      }}
-    >
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          marginBottom: 16,
-        }}
-      >
-        <Text
-          style={{
-            color: TailwindColours.text.muted,
-            fontSize: 14,
-          }}
-        >
-          €{min}
-        </Text>
-        <Text
-          style={{
-            color: TailwindColours.text.primary,
-            fontSize: 16,
-            fontWeight: "bold",
-          }}
-        >
-          €{value.toLocaleString()}
-        </Text>
-        <Text
-          style={{
-            color: TailwindColours.text.muted,
-            fontSize: 14,
-          }}
-        >
-          €{max}
-        </Text>
-      </View>
-      <Slider
-        onValueChange={onValueChange}
-        defaultValue={[value]}
-        max={max}
-        step={step}
-        min={min}
-      >
-        <Slider.Track>
-          <Slider.TrackActive />
-        </Slider.Track>
-        <Slider.Thumb size={"$2"} index={0} circular />
-      </Slider>
-    </View>
-  );
-};
-
-{
-  /* <Slider
-        value={value}
-        onValueChange={onValueChange}
-        maximumValue={max}
-        minimumValue={min}
-        step={step}
-        minimumTrackTintColor={TailwindColours.accent.primary.default}
-        maximumTrackTintColor={TailwindColours.background.tertiary}
-        thumbStyle={{
-          height: 24,
-          width: 24,
-          backgroundColor: TailwindColours.accent.primary.default,
-          borderRadius: 12,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 3.84,
-          elevation: 5,
-        }}
-        trackStyle={{
-          height: 8,
-          borderRadius: 4,
-        }}
-      /> */
+interface CreationInputFactoryProps {
+  question: Question;
+  inputState: InputState;
 }
+
+export const CreationInputFactory = ({
+  question,
+  inputState,
+}: CreationInputFactoryProps) => {
+  const { session } = useAuth();
+
+  if (!session) return <></>;
+
+  const loadImages = useCallback(async () => {
+    try {
+      if (!session?.user?.id) return;
+
+      const images = await supabase.storage
+        .from("profile-images")
+        .list(session.user.id);
+
+      if (images.error) {
+        console.error("Error loading images:", images.error);
+        return;
+      }
+
+      const newImages = await Promise.all(
+        images.data.map(async (item) => {
+          const { data } = await supabase.storage
+            .from("profile-images")
+            .getPublicUrl(`${session.user.id}/${item.name}`);
+
+          const order = parseInt(item.name.split(".")[0]);
+
+          return {
+            uri: data.publicUrl,
+            order: order,
+          };
+        })
+      );
+
+      const sortedImages = newImages.sort((a, b) => a.order - b.order);
+
+      const [media, setMedia] = inputState.media;
+
+      setMedia(sortedImages);
+    } catch (error) {
+      console.error("Image loading error:", error);
+    }
+  }, [session?.user?.id]);
+
+  switch (question.type) {
+    case "text":
+      const [text, setText] = inputState.text;
+
+      return <CreationText question={question} setter={setText} value={text} />;
+    case "multiSelect":
+      const [multiSelect, setMultiSelect] = inputState.multiSelect;
+
+      return (
+        <CreationMultiSelect
+          question={question}
+          value={multiSelect}
+          setter={setMultiSelect}
+        />
+      );
+
+    case "slider":
+      const [slider, setSlider] = inputState.slider;
+      return (
+        <CreationSlider question={question} value={slider} setter={setSlider} />
+      );
+    case "date":
+      const [date, setDate] = inputState.date;
+      return <CreationDate question={question} value={date} setter={setDate} />;
+    case "media":
+      const [media, setMedia] = inputState.media;
+
+      if (!session) return <></>;
+
+      console.log("MEDIA", media);
+      return (
+        <MediaUpload
+          onLoad={() => {
+            loadImages();
+          }}
+          onUpload={(image) => {
+            uploadImage(session, image);
+          }}
+          onDelete={(image) => {
+            deleteImage(session, image);
+          }}
+          question={question}
+          images={media}
+        />
+      );
+    default:
+      return <View />;
+  }
+};
