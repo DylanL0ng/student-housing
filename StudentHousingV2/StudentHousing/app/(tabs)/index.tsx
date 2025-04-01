@@ -7,6 +7,9 @@ import { View } from "@tamagui/core";
 import { useEffect, useState } from "react";
 import supabase from "../lib/supabase";
 
+import { YStack, Spinner, H5, H6 } from "tamagui";
+import Loading from "@/components/Loading";
+
 export default function HomeScreen() {
   const auth = useAuth();
   const [users, setUsers] = useState<User[]>([]);
@@ -114,14 +117,7 @@ export default function HomeScreen() {
   };
 
   if (isLoading || users.length === 0) {
-    return (
-      <View
-        bg={"$background"}
-        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-      >
-        <Text color={"$color"}>Loading...</Text>
-      </View>
-    );
+    return <Loading title="Searching for profiles" />;
   }
 
   return (

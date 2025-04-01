@@ -13,6 +13,22 @@ export interface User {
   profile: Profile;
 }
 
+export interface Filter {
+  id: number;
+  filter_id: string;
+  default: {
+    data: any;
+  };
+  options: any;
+  group?: string;
+  label: string;
+  filter_key: string;
+  filter_table: string;
+  filter_registry: {
+    type: string;
+  };
+}
+
 export interface Profile {
   id: string;
   type: string;
@@ -25,6 +41,11 @@ export interface Profile {
   };
   media: string[];
 }
+export interface Conversation {
+  latest_message?: string;
+  profile: Profile;
+  id: string;
+}
 
 export interface Message {
   message_id: string;
@@ -32,12 +53,6 @@ export interface Message {
   content: string;
   sender: string;
   sent_at: string;
-}
-
-export interface Conversation {
-  latest_message: string;
-  profile: Profile;
-  id: string;
 }
 
 export interface TextMessageProps {

@@ -2,11 +2,11 @@ import { Entypo, Feather } from "@expo/vector-icons";
 import { Link, Router, useNavigation, useRouter } from "expo-router";
 import React, { useContext, useEffect, useState } from "react";
 import {
-  Image,
   KeyboardAvoidingView,
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
+import { Image } from "expo-image";
 
 import { View, Text, useTheme } from "@tamagui/core";
 import { Input } from "@tamagui/input";
@@ -28,8 +28,7 @@ const Header: React.FC<{
     router.push({
       pathname: "/profile",
       params: {
-        // profile: JSON.stringify(conversation.profile),
-        // user: JSON.stringify(conversation),
+        profile: JSON.stringify(profile),
       },
     });
   };
@@ -48,7 +47,6 @@ const Header: React.FC<{
       if (error) {
         console.error("Error fetching profile:", error);
       } else {
-        console.log(data);
         setProfile(data.profile);
       }
     };
@@ -73,10 +71,11 @@ const Header: React.FC<{
         <Entypo name="chevron-left" size={20} color={theme.white9.val} />
       </Button>
       <View style={styles.userInfoContainer}>
-        <TouchableOpacity onPress={() => {}}>
+        <TouchableOpacity onPress={gotoUserProfile}>
           <Image
-            source={{ uri: profile?.media?.[0] }}
+            source={profile?.media?.[0]}
             style={styles.userImage}
+            transition={0}
           />
         </TouchableOpacity>
         <View>

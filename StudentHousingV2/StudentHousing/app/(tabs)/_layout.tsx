@@ -1,5 +1,5 @@
 import { Colors } from "@/constants/Colors";
-import { Tabs, useNavigation } from "expo-router";
+import { router, Tabs, useNavigation, useRouter } from "expo-router";
 import {
   Platform,
   Pressable,
@@ -17,6 +17,7 @@ import TailwindColours from "@/constants/TailwindColours";
 import { useTheme, View } from "@tamagui/core";
 import { useEffect } from "react";
 import Header from "@/components/Header";
+import { useRouteInfo } from "expo-router/build/hooks";
 
 export default function TabLayout() {
   const theme = useTheme();

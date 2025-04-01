@@ -1,7 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { StyleSheet, TouchableOpacity, Image } from "react-native";
-
+import { StyleSheet, TouchableOpacity } from "react-native";
+import { Image } from "expo-image";
 import { useTheme, View } from "@tamagui/core";
 
 import * as ImagePicker from "expo-image-picker";
@@ -105,10 +105,8 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
           {image ? (
             <>
               <Image
-                fadeDuration={0}
-                source={{ uri: image.uri }}
-                style={styles.image}
-                resizeMode="cover"
+                source={image.uri}
+                style={[styles.image, { resizeMode: "cover" }]}
               />
               <TouchableOpacity
                 onPress={() => onDelete({ uri: image.uri, order: idx })}

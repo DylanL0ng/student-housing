@@ -7,7 +7,6 @@ import { useAuth } from "@/components/AuthProvider";
 const RootLayout = () => {
   const navigation = useNavigation();
   const { session } = useAuth();
-  // const router = useRouter();
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
@@ -42,6 +41,7 @@ const RootLayout = () => {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" />
       <Stack.Screen name="creation" />
+      <Stack.Screen name="settings" />
     </Stack>
   );
 };

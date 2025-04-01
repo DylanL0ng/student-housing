@@ -1,19 +1,17 @@
-import { User } from "@/typings";
+import { Profile, User } from "@/typings";
 import { LinearGradient } from "expo-linear-gradient";
-import { Link, useNavigation, useRouter } from "expo-router";
+import { Link, router, useNavigation } from "expo-router";
 import React, { useContext } from "react";
-import { Image, StyleSheet, TouchableOpacity } from "react-native";
-
+import { StyleSheet, TouchableOpacity } from "react-native";
+import { Image } from "expo-image";
 import { Text, View } from "@tamagui/core";
 
-const MatchedProfileMini = (props: User) => {
-  const router = useRouter();
-  console.log(props);
+const MatchedProfileMini = (props: { profile: Profile }) => {
   const openConversation = async () => {
     router.push({
       pathname: "/message_thread",
       params: {
-        conversationId: props.user_id,
+        conversationId: props.profile.id,
       },
     });
   };
@@ -23,9 +21,8 @@ const MatchedProfileMini = (props: User) => {
       <View style={styles.container}>
         <Image
           style={styles.inset}
-          source={{
-            uri: props.profile.media[0],
-          }}
+          source={props.profile.media[0]}
+          transition={0}
         />
         <LinearGradient
           colors={["transparent", "rgba(0,0,0,0.9)"]}
@@ -34,7 +31,7 @@ const MatchedProfileMini = (props: User) => {
         />
       </View>
       <Text color={"$color08"} style={styles.text}>
-        {props.name || "Unknown"}
+        {props.profile.title || "Unknown"}
       </Text>
     </TouchableOpacity>
   );

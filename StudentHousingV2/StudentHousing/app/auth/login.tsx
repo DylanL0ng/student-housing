@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import supabase from "../lib/supabase";
 import {
   GoogleSignin,
@@ -9,6 +9,8 @@ import {
   isNoSavedCredentialFoundResponse,
   GoogleSigninButton,
 } from "@react-native-google-signin/google-signin";
+import { View } from "@tamagui/core";
+import { H1, SizableText } from "@tamagui/text";
 
 const signIn = async () => {
   try {
@@ -57,8 +59,8 @@ const Login = () => {
   });
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Student Housing</Text>
+    <View flex={1} bg={"$background"} justify="center" items="center">
+      <H1 size={"$4"}>Student Housing</H1>
       <GoogleSigninButton
         size={GoogleSigninButton.Size.Wide}
         color={GoogleSigninButton.Color.Dark}
@@ -67,18 +69,5 @@ const Login = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    textTransform: "uppercase",
-  },
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-});
 
 export default Login;

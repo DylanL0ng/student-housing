@@ -16,7 +16,6 @@ export const CreationMultiSelect = ({
         ? value.filter((i: string) => i !== interest_id)
         : [...value, interest_id];
 
-      console.log("newSelectedOptions", newSelectedOptions);
       setter(newSelectedOptions);
     },
     [value]

@@ -8,7 +8,7 @@ const Routing = () => {
   const { session, loading } = useAuth();
 
   // useEffect(() => {
-  //   generateFakeUsers(5);
+  //   generateFakeUsers(10);
   // }, []);
 
   useEffect(() => {

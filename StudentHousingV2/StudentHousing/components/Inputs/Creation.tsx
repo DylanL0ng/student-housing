@@ -97,7 +97,6 @@ export const CreationInputFactory = ({
 
       if (!session) return <></>;
 
-      console.log("MEDIA", media);
       return (
         <MediaUpload
           onLoad={() => {

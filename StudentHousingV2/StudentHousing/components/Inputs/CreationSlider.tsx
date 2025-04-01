@@ -20,7 +20,6 @@ export const CreationSlider = ({
       question.options.value
     ) {
       setter(value);
-      console.log("Updated options", question.options);
       setOptions(question.options);
     }
   }, []);

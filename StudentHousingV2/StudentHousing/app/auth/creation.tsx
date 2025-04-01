@@ -208,7 +208,6 @@ const CreateScreen = () => {
     setAnswers((prev) => newAnswer);
 
     if (questionIndex + 1 >= questions().length) {
-      console.log("Answers", newAnswer);
       router.replace("/(tabs)");
       // submit the data
     }
@@ -288,7 +287,7 @@ const CreateScreen = () => {
                 {questions()[questionIndex].skipable && (
                   <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => console.log("Skip question")}
+                    onPress={() => console.error("Skip question")}
                   >
                     <Text color="$color11">Skip</Text>
                   </TouchableOpacity>

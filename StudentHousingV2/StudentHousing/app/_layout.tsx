@@ -10,8 +10,6 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
-import Header from "@/components/Header";
-import { Text } from "react-native";
 import supabase from "./lib/supabase";
 
 import * as Location from "expo-location";
@@ -131,15 +129,10 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <TamaguiProvider config={config} defaultTheme="dark">
-        <Stack
-          screenOptions={{
-            headerStyle: {
-              backgroundColor: "hsla(0, 0%, 100%, 0.1)",
-            },
-          }}
-        >
+        <Stack>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(modals)" options={{ presentation: "modal" }} />
+          <Stack.Screen name="(filters)" options={{ presentation: "modal" }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />

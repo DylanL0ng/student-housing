@@ -3,9 +3,9 @@ import { Entypo } from "@expo/vector-icons";
 import { Text, useTheme, View } from "@tamagui/core";
 import { Link, useRouter } from "expo-router";
 import React from "react";
-import { Image, StyleSheet, TouchableOpacity } from "react-native";
-
-const ConversationMini = (conversation: User & Conversation) => {
+import { StyleSheet, TouchableOpacity } from "react-native";
+import { Image } from "expo-image";
+const ConversationMini = (conversation: Conversation) => {
   const recentMessage = conversation.latest_message;
   const yourTurn = true;
 
@@ -17,19 +17,14 @@ const ConversationMini = (conversation: User & Conversation) => {
     router.push({
       pathname: "/message_thread",
       params: {
-        conversationId: conversation.user_id,
+        conversationId: conversation.id,
       },
     });
   };
 
-  // console.log(theme.color02.val);
-
   return (
     <TouchableOpacity onPress={openConversation} activeOpacity={0.95}>
       <View
-        // bg={}
-        // opacity={0.75}
-
         paddingInline={"$2"}
         paddingBlock={"$2"}
         rounded={"$2"}
@@ -41,9 +36,8 @@ const ConversationMini = (conversation: User & Conversation) => {
         <View style={styles.profile}>
           <Image
             style={styles.profileImage}
-            source={{
-              uri: conversation.profile.media[0],
-            }}
+            transition={0}
+            source={conversation.profile.media[0]}
           />
         </View>
 

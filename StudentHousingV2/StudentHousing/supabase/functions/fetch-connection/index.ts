@@ -13,7 +13,6 @@ export interface Profile {
   };
   media: string[];
 }
-
 export interface Conversation {
   profile: Profile;
   id: string;
@@ -37,14 +36,14 @@ const createSupabaseClient = (() => {
   };
 })();
 
-const getMatchedUsers = async (supabase, userId: string) => {
-  const { data, error } = await supabase.rpc("get_matched_users", {
+const getUserData = async (supabase, userId: string) => {
+  const { data, error } = await supabase.rpc("get_user_data_by_id", {
     input_user_id: userId,
   });
 
   if (error) {
-    console.error("Error fetching matched users:", error);
-    return [];
+    console.error("Error fetching user data:", error);
+    return;
   }
   return data;
 };
@@ -96,37 +95,35 @@ Deno.serve(async (req) => {
   try {
     const { userId } = await req.json();
 
-    const matchedUsersData = await getMatchedUsers(supabase, userId);
+    const userDataResult = await getUserData(supabase, userId);
+    console.log("User data result:", userDataResult);
+    const mediaUrls = await getMediaUrls(supabase, userId);
 
-    const matchedUsers: Conversation[] = await Promise.all(
-      matchedUsersData.map(async (user) => {
-        const userMediaUrls = await getMediaUrls(supabase, user.user_id);
-        return {
-          profile: {
-            id: user.user_id,
-            type: user.profile.type,
-            title: user.profile.title,
-            interests: user.profile.interests,
-            location: {
-              city: user.profile.city,
-              point: {
-                longitude: user.profile.point.coordinates[0],
-                latitude: user.profile.point.coordinates[1],
-              },
-            },
-            media: userMediaUrls,
+    // Map the response data to the desired structure
+    const responseData: Conversation = {
+      profile: {
+        id: userDataResult.user_id,
+        type: userDataResult.profile.type,
+        title: userDataResult.profile.title,
+        interests: userDataResult.profile.interests,
+        location: {
+          city: userDataResult.profile.city,
+          point: {
+            longitude: userDataResult.profile.point.coordinates[0],
+            latitude: userDataResult.profile.point.coordinates[1],
           },
-          id: user.user_id,
-          latest_message: user.latest_message,
-          has_conversation: user.has_conversation,
-          conversation_members: user.conversation_members,
-        };
-      })
-    );
+        },
+        media: mediaUrls,
+      },
+      id: userDataResult.user_id,
+      latest_message: userDataResult.latest_message,
+      has_conversation: userDataResult.has_conversation,
+      conversation_members: userDataResult.conversation_members,
+    };
 
-    console.log("Matched users:", matchedUsers);
+    console.log("Response data:", responseData);
 
-    return new Response(JSON.stringify(matchedUsers), {
+    return new Response(JSON.stringify(responseData), {
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",

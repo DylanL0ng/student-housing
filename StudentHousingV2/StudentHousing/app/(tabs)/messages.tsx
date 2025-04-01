@@ -8,21 +8,24 @@ import { StyleSheet } from "react-native";
 import { View, Text } from "@tamagui/core";
 import supabase from "../lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
+import { H6 } from "@tamagui/text";
+import Loading from "@/components/Loading";
 
 export default function MessagesScreen() {
-  const [matchedUsers, setMatchedUsers] = useState<User[]>([]);
+  const { session } = useAuth();
+
+  if (!session) return <></>;
+
   const [conversationHistory, setConversationHistory] = useState<User[]>([]);
   const [unInteractedMatches, setUnInteractedMatches] = useState<User[]>([]);
-
-  const auth = useAuth();
-
-  if (!auth.session) return <></>;
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    setIsLoading(true);
     supabase.functions
       .invoke("fetch-connections", {
         body: {
-          userId: auth.session.user.id,
+          userId: session.user.id,
         },
       })
       .then(({ data, error }) => {
@@ -34,104 +37,17 @@ export default function MessagesScreen() {
         data as User[];
 
         const _conversationHistory = data.filter(
-          (user) => user.has_conversation
+          (user: User & { has_conversation: boolean }) => user.has_conversation
         );
         const _unInteractedMatches = data.filter(
-          (user) => !user.has_conversation
+          (user: User & { has_conversation: boolean }) => !user.has_conversation
         );
 
         setConversationHistory(_conversationHistory);
         setUnInteractedMatches(_unInteractedMatches);
+        setIsLoading(false);
       });
   }, []);
-
-  // const onMount = async () => {
-  //   // // const users = await getPotentialMatches();
-  //   // if (!users) return;
-
-  //   // const { data, error } = await supabase.rpc(
-  //   //   "get_all_users_with_latest_messages",
-  //   //   { target_user_id: auth.session!.user.id }
-  //   // );
-
-  //   if (error) {
-  //     console.error("Error:", error);
-  //   } else {
-  //     console.log("Fetched Data:", data);
-  //   }
-  //   // const userId = auth.session!.user.id;
-
-  //   // const { data: conversationMembers, error: conversationError } =
-  //   //   await supabase
-  //   //     .from("conversation_members")
-  //   //     .select("conversation_id")
-  //   //     .eq("user_id", userId);
-
-  //   // if (conversationError) {
-  //   //   console.error("Error fetching conversations:", conversationError);
-  //   //   return;
-  //   // }
-
-  //   // const conversationIds = conversationMembers.map((c) => c.conversation_id);
-
-  //   // const { data: conversationUsers, error: convUserError } = await supabase
-  //   //   .from("conversation_members")
-  //   //   .select("user_id, conversation_id")
-  //   //   .in("conversation_id", conversationIds)
-  //   //   .neq("user_id", userId);
-
-  //   // if (convUserError) {
-  //   //   console.error("Error fetching users with conversations:", convUserError);
-  //   //   return;
-  //   // }
-
-  //   // const usersWithConversations = new Map();
-  //   // conversationUsers.forEach(({ user_id, conversation_id }) => {
-  //   //   if (user_id !== userId) {
-  //   //     usersWithConversations.set(user_id, conversation_id);
-  //   //   }
-  //   // });
-
-  //   // const { data: recentMessages, error: messageError } = await supabase
-  //   //   .from("messages")
-  //   //   .select("conversation_id, content, created_at")
-  //   //   .in("conversation_id", conversationIds)
-  //   //   .order("created_at", { ascending: false })
-  //   //   .limit(1, { foreignTable: "conversation_id" }); // Get only the latest message per conversation
-
-  //   // if (messageError) {
-  //   //   console.error("Error fetching recent messages:", messageError);
-  //   //   return;
-  //   // }
-
-  //   // console.log("recentMessages", recentMessages);
-
-  //   // // Separate matched users
-  //   // const interacted = users
-  //   //   .filter((user) => usersWithConversations.has(user.id))
-  //   //   .map((user) => {
-  //   //     const conversationId = usersWithConversations.get(user.id);
-  //   //     const recentMessage = recentMessages.find(
-  //   //       (msg) => msg.conversation_id === conversationId
-  //   //     );
-  //   //     return {
-  //   //       ...user,
-  //   //       recent_message: recentMessage ? recentMessage.content : null,
-  //   //     };
-  //   //   });
-  //   // const unInteracted = users.filter(
-  //   //   (user) => !usersWithConversations.has(user.id)
-  //   // );
-
-  //   // console.log("conversationHistory", interacted);
-
-  //   // setConversationHistory(interacted);
-  //   // setUnInteractedMatches(unInteracted);
-  // };
-
-  // useEffect(() => {
-  //   onMount();
-  // }, []);
 
   const realtimeSubscription = () => {
     const connectionsChannel = supabase.channel("connections");
@@ -144,7 +60,7 @@ export default function MessagesScreen() {
         (payload) => {
           if (payload.eventType === "INSERT") {
             const newData = payload.new as { cohert1: string; cohert2: string };
-            const userId = auth.session?.user.id;
+            const userId = session?.user.id;
             const newConnection =
               userId === newData.cohert1 || userId === newData.cohert2;
 
@@ -161,10 +77,39 @@ export default function MessagesScreen() {
           event: "*",
           schema: "public",
           table: "conversation_members",
-          filter: `user_id=eq.${auth.session?.user.id}`,
+          filter: `user_id=eq.${session?.user.id}`,
         },
-        (payload) => {
+        async (payload) => {
           if (payload.eventType === "INSERT") {
+            const newData = payload.new as {
+              conversation_id: string;
+              user_id: string;
+            };
+
+            const { error, data } = await supabase.functions.invoke(
+              "fetch-connection",
+              {
+                body: {
+                  userId: newData.conversation_id,
+                },
+              }
+            );
+
+            if (error) {
+              console.error("Error fetching connection:", error);
+              return;
+            }
+            if (!data) return;
+
+            const newConversation = data as User;
+
+            setConversationHistory((prev) => [...prev, newConversation]);
+
+            setUnInteractedMatches((prev) =>
+              prev.filter(
+                (user) => user.profile?.id !== newConversation.profile.id
+              )
+            );
           }
         }
       )
@@ -178,16 +123,15 @@ export default function MessagesScreen() {
 
   const renderRowItem = useCallback(({ item, index }: any) => {
     return (
-      <View
-        // bg={"$color"}
-        style={{
-          marginHorizontal: index % 2 != 0 ? 4 : 0,
-        }}
-      >
+      <View marginInline={index % 2 != 0 ? 4 : 0}>
         <MatchedProfileMini {...item} />
       </View>
     );
   }, []);
+
+  if (isLoading) {
+    return <Loading title="Searching for connections" />;
+  }
 
   return (
     <SafeAreaView style={styles.flex}>
@@ -201,9 +145,9 @@ export default function MessagesScreen() {
           ListHeaderComponent={
             <View>
               {unInteractedMatches.length > 0 && (
-                <Text color={"$color"} style={styles.text}>
+                <H6 fontSize={"$2"} fontWeight={"bold"} color={"$color"}>
                   Connections
-                </Text>
+                </H6>
               )}
               <FlatList
                 overScrollMode="never"
@@ -214,9 +158,9 @@ export default function MessagesScreen() {
                 keyExtractor={(item, index) => index.toString()}
               />
               {conversationHistory.length > 0 && (
-                <Text color={"$color"} style={{ ...styles.text, ...styles.mt }}>
+                <H6 fontSize={"$2"} fontWeight={"bold"} color={"$color"}>
                   Messages
-                </Text>
+                </H6>
               )}
             </View>
           }
