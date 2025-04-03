@@ -1,10 +1,10 @@
 import { Conversation, User } from "@/typings";
 import { Entypo } from "@expo/vector-icons";
-import { Text, useTheme, View } from "@tamagui/core";
 import { Link, useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
+import { Text, useTheme, View } from "tamagui";
 const ConversationMini = (conversation: Conversation) => {
   const recentMessage = conversation.latest_message;
   const yourTurn = true;

@@ -1,9 +1,8 @@
 // components/inputs/CreationMultiSelect.tsx
-import React, { useCallback } from "react";
+import { useCallback } from "react";
 import { ScrollView } from "react-native";
-import { Button } from "@tamagui/button";
-
 import { CreationInputProps, Interest } from "@/typings";
+import { Button } from "tamagui";
 
 export const CreationMultiSelect = ({
   question,

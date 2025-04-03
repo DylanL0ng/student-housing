@@ -1,9 +1,10 @@
 // components/inputs/CreationDate.tsx
 import React, { useState } from "react";
-import { Button } from "@tamagui/button";
-import { Text } from "@tamagui/core";
-import DatePicker from "react-native-date-picker";
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+// import DatePicker from "react-native-date-picker";
 import { CreationDateProps } from "@/typings";
+import { Button, Text } from "tamagui";
 
 export const CreationDate = ({ value, setter }: CreationDateProps) => {
   const calculateAge = (date: Date) => {
@@ -17,17 +18,41 @@ export const CreationDate = ({ value, setter }: CreationDateProps) => {
     return age;
   };
 
+
   const [date, setDate] = useState(value || new Date());
   const [open, setOpen] = useState(false);
   const [age, setAge] = useState<number | null>(
     value ? calculateAge(value) : null
   );
 
+
+  const closeDatePicker = () => {
+    setOpen(false);
+  };
+  const openDatePicker = () => {
+    setOpen(true);    
+  };
+
   return (
     <>
       {age !== null && <Text color="$color">I am {age} years old</Text>}
-      <Button onPress={() => setOpen(true)}>Select date</Button>
-      <DatePicker
+      <Button onPress={() => openDatePicker}>Select date</Button>
+      {
+        open && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            onChange={(event, selectedDate) => {
+              const currentDate = selectedDate || date;
+              closeDatePicker()
+              setDate(currentDate);
+              setter(currentDate); // Call the setter to update the value
+            }}
+          />
+        )
+      }
+
+      {/* <DatePicker
         modal
         date={date}
         open={open}
@@ -41,7 +66,7 @@ export const CreationDate = ({ value, setter }: CreationDateProps) => {
         onCancel={() => {
           setOpen(false);
         }}
-      />
+      /> */}
     </>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import  { useEffect, useRef, useState } from "react";
 import { StyleSheet, GestureResponderEvent } from "react-native";
 import { TouchableOpacity, View } from "react-native";
 import { Image } from "expo-image";

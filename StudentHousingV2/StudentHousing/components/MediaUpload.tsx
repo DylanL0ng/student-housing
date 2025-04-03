@@ -2,10 +2,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
-import { useTheme, View } from "@tamagui/core";
+import { useTheme, View } from "tamagui";
 
 import * as ImagePicker from "expo-image-picker";
-import supabase from "@/app/lib/supabase";
+import supabase from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
 
 export interface ImageObject {

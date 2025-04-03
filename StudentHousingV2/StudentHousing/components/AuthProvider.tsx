@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
-import supabase from "../app/lib/supabase";
+import supabase from "@/lib/supabase";
 import { router } from "expo-router";
 
 interface AuthContextType {
@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!session) {
-          router.replace("/auth/login");
+          router.replace("/(auth)/login");
           setSession(null); // Handle the case where the session is closed
         } else setSession(session);
       }

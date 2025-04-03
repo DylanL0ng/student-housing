@@ -1,4 +1,4 @@
-import supabase from "@/app/lib/supabase";
+import supabase from "@/lib/supabase";
 import { ar, faker } from "@faker-js/faker";
 
 import * as Location from "expo-location";

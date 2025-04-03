@@ -1,6 +1,4 @@
-import { Text } from "@tamagui/core";
-import { Spinner, YStack } from "tamagui";
-import { View } from "@tamagui/core";
+import { Spinner, View, YStack, Text } from "tamagui";
 
 const Loading = ({ title }: { title: string }) => {
   return (

@@ -1,9 +1,7 @@
-// components/inputs/CreationSlider.tsx
-import React, { useEffect, useState } from "react";
-import { Slider } from "@tamagui/slider";
-import { Text, useTheme, View } from "@tamagui/core";
+import { useEffect, useState } from "react";
 
 import { CreationInputProps, Question } from "@/typings";
+import { Slider, Text, View } from "tamagui";
 
 export const CreationSlider = ({
   question,

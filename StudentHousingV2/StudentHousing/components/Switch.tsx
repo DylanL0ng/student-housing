@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
-import { Text, View } from "@tamagui/core";
-import { Button } from "@tamagui/button";
+import { Text, View } from "tamagui";
 
 type Option<T> = {
   state: T;

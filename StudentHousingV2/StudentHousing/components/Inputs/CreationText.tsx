@@ -1,7 +1,6 @@
-// components/inputs/CreationText.tsx
-import React, { useEffect, useState } from "react";
-import { Input } from "@tamagui/input";
+import { useEffect, useState } from "react";
 import { CreationInputProps } from "@/typings";
+import { Input } from "tamagui";
 
 export const CreationText = ({
   question,

@@ -1,5 +1,4 @@
 import React, { useCallback } from "react";
-import { View } from "@tamagui/core";
 import { CreationText } from "./CreationText";
 import { CreationMultiSelect } from "./CreationMultiSelect";
 import { CreationSlider } from "./CreationSlider";
@@ -7,7 +6,8 @@ import { CreationDate } from "./CreationDate";
 import MediaUpload, { deleteImage, uploadImage } from "../MediaUpload";
 import { Question, ImageObject } from "@/typings";
 import { useAuth } from "../AuthProvider";
-import supabase from "@/app/lib/supabase";
+import supabase from "@/lib/supabase";
+import { View } from "tamagui";
 
 interface InputState {
   text: [string, (value: string) => void];

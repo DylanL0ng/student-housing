@@ -10,33 +10,35 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
-import supabase from "./lib/supabase";
+import supabase from "@/lib/supabase";
 
 import * as Location from "expo-location";
 
-import { TamaguiProvider, createTamagui, useTheme } from "@tamagui/core";
-import { defaultConfig } from "@tamagui/config/v4";
+import { defaultConfig } from '@tamagui/config/v4'
+
+
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { Session } from "@supabase/supabase-js";
+import { createTamagui, TamaguiProvider, Text } from "tamagui";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-// you usually export this from a tamagui.config.ts file
-// defaultConfig.themes.dark
-const config = createTamagui(defaultConfig);
 
-type Conf = typeof config;
+
+// you usually export this from a tamagui.config.ts file
+const config = createTamagui(defaultConfig)
+
+type Conf = typeof config
 
 // make imports typed
-declare module "@tamagui/core" {
+declare module 'tamagui' {
   interface TamaguiCustomConfig extends Conf {}
 }
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const colorScheme = useColorScheme();
-  // const theme = useTheme();
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
@@ -62,60 +64,6 @@ export default function RootLayout() {
     };
   }, []);
 
-  const requestPermissions = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      console.error(
-        "Permission to access location was denied. Please enable location permissions in your device settings."
-      );
-      return;
-    }
-  };
-
-  const handleMountOperations = async () => {
-    await requestPermissions();
-
-    const subscription = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.Balanced,
-        distanceInterval: 100,
-      },
-      async (location) => {
-        const { latitude, longitude } = location.coords;
-
-        const geocode = await Location.reverseGeocodeAsync({
-          latitude,
-          longitude,
-        });
-
-        let city = "unknown";
-        let country = "unknown";
-        if (geocode.length > 0) {
-          const { city: _city, country: _country } = geocode[0];
-          if (_city) city = _city;
-          if (_country) country = _country;
-        }
-
-        const { data, error } = await supabase
-          .from("profile_locations")
-          .upsert({
-            point: `POINT(${latitude} ${longitude})`,
-            city: city,
-            id: session?.user.id,
-          });
-      }
-    );
-
-    return () => {
-      subscription.remove();
-    };
-  };
-
-  useEffect(() => {
-    if (!session) return;
-    handleMountOperations();
-  }, [session]);
-
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
@@ -123,16 +71,15 @@ export default function RootLayout() {
   }, [loaded]);
 
   if (!loaded) {
-    return null;
+    return <></>;
   }
 
   return (
     <AuthProvider>
       <TamaguiProvider config={config} defaultTheme="dark">
-        <Stack>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(modals)" options={{ presentation: "modal" }} />
-          <Stack.Screen name="(filters)" options={{ presentation: "modal" }} />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" options={{headerShown: false}} />
+          <Stack.Screen name="(main)" options={{headerShown: false}} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />

@@ -1,11 +1,10 @@
 import { Entypo, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useContext, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity } from "react-native";
 import ImageCollection from "./Profile/ImageCollection";
 import { Profile } from "@/typings";
 
-import { View } from "@tamagui/core";
+import { View } from "tamagui";
 import { router } from "expo-router";
 
 const calculateAge = (timestamptz: string) => {

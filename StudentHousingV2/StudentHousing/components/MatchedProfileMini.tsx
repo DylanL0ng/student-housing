@@ -4,7 +4,7 @@ import { Link, router, useNavigation } from "expo-router";
 import React, { useContext } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
-import { Text, View } from "@tamagui/core";
+import { Text, View } from "tamagui";
 
 const MatchedProfileMini = (props: { profile: Profile }) => {
   const openConversation = async () => {

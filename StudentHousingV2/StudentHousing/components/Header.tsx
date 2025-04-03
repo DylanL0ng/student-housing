@@ -1,13 +1,10 @@
-import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { StyleSheet, StatusBar } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Settings, Settings2 } from "@tamagui/lucide-icons";
 import { router, useSegments } from "expo-router";
-import { useTheme, View } from "@tamagui/core";
-import { Button } from "@tamagui/button";
-import { XGroup } from "@tamagui/group";
+import { Button, useTheme, View, XGroup } from "tamagui";
 
 type HeaderProps = {
   page: string;
@@ -26,8 +23,8 @@ const Header = (props: HeaderProps) => {
         width={"100%"}
         bg={"$color2"}
         paddingInline={"$4"}
-        paddingBlock={"$2"}
-        pt={insets.top + 8} // Add padding for status bar
+        paddingBlock={'$4'}
+        paddingTop={insets.top}
         items={"flex-end"}
       >
         <StatusBar barStyle="dark-content" />
@@ -37,7 +34,7 @@ const Header = (props: HeaderProps) => {
               circular={true}
               onPress={() => {
                 router.push({
-                  pathname: "/(modals)/filters",
+                  pathname: "/(filters)",
                 });
               }}
             >
