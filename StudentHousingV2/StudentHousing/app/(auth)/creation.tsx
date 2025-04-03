@@ -149,7 +149,6 @@ const CreateScreen = () => {
     router.replace("/login");
   }, []);
 
-  // Slide animation effect
   useEffect(() => {
     slideAnim.setValue(SCREEN_WIDTH);
     Animated.spring(slideAnim, {

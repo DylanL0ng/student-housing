@@ -14,8 +14,9 @@ const RootLayout = () => {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select('created')
-      .eq("id", session.user.id).single();
+      .select("created")
+      .eq("id", session.user.id)
+      .single();
 
     if (error) {
       supabase.auth.signOut();
@@ -26,7 +27,7 @@ const RootLayout = () => {
       return router.replace("/login");
     }
 
-    console.log(data.created)
+    // console.log(data.created)
     if (data.created) return router.replace("/(main)/(tabs)");
 
     return router.replace("/creation");
@@ -36,11 +37,11 @@ const RootLayout = () => {
     handleSession(session);
   }, [session]);
 
-  const theme = useTheme()
+  const theme = useTheme();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background.val }}>
-      <Stack screenOptions={{headerShown: false}}>
+      <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="login" />
         <Stack.Screen name="creation" />
       </Stack>

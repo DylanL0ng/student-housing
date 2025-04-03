@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
     const { userId } = await req.json();
 
     const userDataResult = await getUserData(supabase, userId);
-    console.log("User data result:", userDataResult);
+    // console.log("User data result:", userDataResult);
     const mediaUrls = await getMediaUrls(supabase, userId);
 
     // Map the response data to the desired structure
@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
       conversation_members: userDataResult.conversation_members,
     };
 
-    console.log("Response data:", responseData);
+    // console.log("Response data:", responseData);
 
     return new Response(JSON.stringify(responseData), {
       headers: {

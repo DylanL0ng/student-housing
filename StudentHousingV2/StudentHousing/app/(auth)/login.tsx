@@ -9,16 +9,16 @@ import {
   isNoSavedCredentialFoundResponse,
   GoogleSigninButton,
 } from "@react-native-google-signin/google-signin";
-import * as AppleAuthentication from 'expo-apple-authentication';
+import * as AppleAuthentication from "expo-apple-authentication";
 
-import { Button, View, H1 } from 'tamagui';
+import { Button, View, H1 } from "tamagui";
 
-const supabaseLogin = async (provider: 'google' | 'apple', token: string) => {
+const supabaseLogin = async (provider: "google" | "apple", token: string) => {
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider: provider,
     token: token,
   });
-}
+};
 
 const handleAppleSignIn = async () => {
   try {
@@ -30,27 +30,26 @@ const handleAppleSignIn = async () => {
     });
 
     if (credential.identityToken) {
-      supabaseLogin('apple', credential.identityToken);
+      supabaseLogin("apple", credential.identityToken);
     }
-    console.log("Apple credential", credential);
+    // console.log("Apple credential", credential);
   } catch (e) {
-    if (e.code === 'ERR_REQUEST_CANCELED') {
+    if (e.code === "ERR_REQUEST_CANCELED") {
       // handle that the user canceled the sign-in flow
     } else {
       // handle other errors
     }
   }
-}
+};
 
 const handleAndroidSignIn = async () => {
   try {
     await GoogleSignin.hasPlayServices();
     const response = await GoogleSignin.signIn();
     if (isSuccessResponse(response)) {
-
-      // console.log("Google response", response);
+      // // console.log("Google response", response);
       if (response.data.idToken) {
-        supabaseLogin('google', response.data.idToken);
+        supabaseLogin("google", response.data.idToken);
       }
     } else if (isNoSavedCredentialFoundResponse(response)) {
       // Android and Apple only.
@@ -80,14 +79,9 @@ const handleAndroidSignIn = async () => {
   }
 };
 
-
-const RenderLoginButton = ({os = 'ios'}) => {
+const RenderLoginButton = ({ os = "ios" }) => {
   if (os === "ios") {
-    return (
-      <Button onPress={handleAndroidSignIn}>
-        Login
-        </Button>
-    )
+    return <Button onPress={handleAndroidSignIn}>Login</Button>;
     // return (
     //   <AppleAuthentication.AppleAuthenticationButton
     //     buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
@@ -97,13 +91,15 @@ const RenderLoginButton = ({os = 'ios'}) => {
     //   />
     // )
   } else if (os === "android") {
-    return (<GoogleSigninButton
+    return (
+      <GoogleSigninButton
         size={GoogleSigninButton.Size.Wide}
         color={GoogleSigninButton.Color.Dark}
         onPress={handleAndroidSignIn}
-      />)
+      />
+    );
   }
-}
+};
 
 const LoginScreen = () => {
   GoogleSignin.configure({
@@ -115,7 +111,7 @@ const LoginScreen = () => {
   return (
     <View flex={1} bg={"$background"} justify="center" items="center">
       <H1 size={"$4"}>Student Housing</H1>
-      <RenderLoginButton os='ios' />
+      <RenderLoginButton os="ios" />
     </View>
   );
 };

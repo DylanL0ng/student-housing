@@ -63,7 +63,7 @@ async function fetchAllUserProfiles(supabase: any, currentUserId: string) {
     }
   );
 
-  console.log("Fetching profile data for user:", currentUserId, profilesData);
+  // console.log("Fetching profile data for user:", currentUserId, profilesData);
 
   if (profilesError) {
     console.error(`Profiles fetch error: ${profilesError.message}`);

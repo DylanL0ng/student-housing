@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
       })
     );
 
-    console.log("Matched users:", matchedUsers);
+    // console.log("Matched users:", matchedUsers);
 
     return new Response(JSON.stringify(matchedUsers), {
       headers: {

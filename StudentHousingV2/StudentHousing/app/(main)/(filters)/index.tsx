@@ -2,11 +2,12 @@ import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useEffect, useState, useCallback } from "react";
 import { ChevronRight } from "@tamagui/lucide-icons";
 import { YGroup, ListItem, ScrollView, View, Button } from "tamagui";
-import {Header} from '@react-navigation/elements/src/Header/Header'
+import { Header } from "@react-navigation/elements/src/Header/Header";
 import supabase from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from "@react-navigation/native";
+import { Text as HeaderText } from "@react-navigation/elements/src/Text";
 
 interface Filter {
   id: number;
@@ -25,14 +26,45 @@ interface Filter {
   };
 }
 
+export const HeaderWithText = ({
+  page = "Filters",
+  title = "Done",
+}: {
+  page: string;
+  title: string;
+}) => {
+  return (
+    <Header
+      title={page}
+      headerRight={() => {
+        return (
+          <HeaderText
+            onPress={() => {
+              router.back();
+            }}
+          >
+            {title}
+          </HeaderText>
+        );
+      }}
+    />
+  );
+};
+
+export const HeaderWithBack = ({ page = "Filters" }) => {
+  return <Header back={{ title: "Back", href: "/" }} title={page} />;
+};
+
 const FilterScreen = () => {
   const navigation = useNavigation();
   const [filterData, setFilterData] = useState<Filter[]>([]);
-  const [savedFilterData, setSavedFilterData] = useState<Record<string, any>>({});
+  const [savedFilterData, setSavedFilterData] = useState<Record<string, any>>(
+    {}
+  );
   const [formattedFilterData, setFormattedFilterData] = useState<Filter[]>([]);
 
   const { filtersToSave } = useLocalSearchParams();
-  
+
   // Fetch original filters from Supabase
   const fetchFilters = async () => {
     const { data, error } = await supabase.from("filters").select(
@@ -49,55 +81,60 @@ const FilterScreen = () => {
     if (!data) return;
 
     setFilterData(data as Filter[]);
-  }
+  };
 
   // Format descriptions based on saved filter data
-  const formatFilterDescriptions = useCallback((filters: Filter[], savedData: Record<string, any>) => {
-    return filters.map((filter: Filter) => {
-      let description = filter.description;
-      
-      if (savedData[filter.filter_key] !== undefined) {
-        if (filter.filter_registry.type === "multiSelect") {
-          // For multiSelect, extract the selected values
-          const values = Object.entries(savedData[filter.filter_key]);
-          description = values
-            .filter(([_, value]) => value)
-            .map(([key]) => key)
-            .join(", ");
-        } else if (typeof savedData[filter.filter_key] === 'object') {
-          // For other object values
-          description = Object.keys(savedData[filter.filter_key]).join(', ');
-        } else {
-          // For primitive values (like sliders)
-          description = String(savedData[filter.filter_key]);
+  const formatFilterDescriptions = useCallback(
+    (filters: Filter[], savedData: Record<string, any>) => {
+      return filters.map((filter: Filter) => {
+        let description = filter.description;
+
+        if (savedData[filter.filter_key] !== undefined) {
+          if (filter.filter_registry.type === "multiSelect") {
+            const values = Object.entries(savedData[filter.filter_key]);
+            description = values
+              .filter(([_, value]) => value)
+              .map(([key]) => key)
+              .join(", ");
+          } else if (filter.filter_registry.type === "slider") {
+            const values = savedData[filter.filter_key];
+            description = values.join(" - ");
+          } else if (typeof savedData[filter.filter_key] === "object") {
+            description = Object.keys(savedData[filter.filter_key]).join(", ");
+          } else {
+            description = String(savedData[filter.filter_key]);
+          }
         }
-      }
-      
-      return {
-        ...filter,
-        description
-      };
-    });
-  }, []);
+
+        return {
+          ...filter,
+          description,
+        };
+      });
+    },
+    []
+  );
 
   // Get saved filters from AsyncStorage
   const getSavedFilters = async () => {
     try {
       const data = await AsyncStorage.getItem("filters");
       const parsedData: { [key: string]: any } = data ? JSON.parse(data) : {};
-      
-      console.log("Saved filters:", parsedData);
+
+      // console.log("Saved filters:", parsedData);
       setSavedFilterData(parsedData);
-      
+
       // If we already have filter data, update the formatted data immediately
       if (filterData.length > 0) {
-        setFormattedFilterData(formatFilterDescriptions(filterData, parsedData));
+        setFormattedFilterData(
+          formatFilterDescriptions(filterData, parsedData)
+        );
       }
     } catch (error) {
       console.error("Error getting saved filters:", error);
       setSavedFilterData({});
     }
-  }
+  };
 
   // Refresh all data
   const refreshData = useCallback(async () => {
@@ -120,7 +157,9 @@ const FilterScreen = () => {
 
   useEffect(() => {
     if (filterData.length > 0) {
-      setFormattedFilterData(formatFilterDescriptions(filterData, savedFilterData));
+      setFormattedFilterData(
+        formatFilterDescriptions(filterData, savedFilterData)
+      );
     }
   }, [filterData, savedFilterData, formatFilterDescriptions]);
 
@@ -136,9 +175,9 @@ const FilterScreen = () => {
             onPress={() =>
               router.navigate({
                 pathname: "/(filters)/multiSelect",
-                params: { 
+                params: {
                   item: JSON.stringify(item),
-                  onReturn: "refresh"
+                  onReturn: "refresh",
                 },
               })
             }
@@ -151,15 +190,15 @@ const FilterScreen = () => {
             title={item.label}
             subTitle={item.description}
             pressTheme
-            onPress={() =>
+            onPress={() => {
               router.navigate({
                 pathname: "/(filters)/slider",
-                params: { 
+                params: {
                   item: JSON.stringify(item),
-                  onReturn: "refresh"
+                  onReturn: "refresh",
                 },
-              })
-            }
+              });
+            }}
             iconAfter={ChevronRight}
           />
         );
@@ -171,9 +210,9 @@ const FilterScreen = () => {
             onPress={() =>
               router.navigate({
                 pathname: "/(filters)/map",
-                params: { 
+                params: {
                   item: JSON.stringify(item),
-                  onReturn: "refresh"
+                  onReturn: "refresh",
                 },
               })
             }
@@ -188,9 +227,9 @@ const FilterScreen = () => {
             onPress={() =>
               router.navigate({
                 pathname: "/(filters)/default",
-                params: { 
+                params: {
                   item: JSON.stringify(item),
-                  onReturn: "refresh"
+                  onReturn: "refresh",
                 },
               })
             }
@@ -199,24 +238,18 @@ const FilterScreen = () => {
         );
     }
   };
-
   return (
     <>
-    <Header
-    back={{ title: "Back", href: "/" }}
-      title="Filters"
-      />
-    <ScrollView flex={1} bg={"$background"}>
-      <View paddingBlock={'$4'} paddingInline={'$4'}>
-        <YGroup rowGap={"$0.5"}>
-          {formattedFilterData.map((filter, index) => (
-            <YGroup.Item key={index}>
-              {RenderFilterItem(filter)}
-            </YGroup.Item>
-          ))}
-        </YGroup>
-      </View>
-    </ScrollView>
+      <HeaderWithText page={"Filters"} title={"Done"} />
+      <ScrollView flex={1} bg={"$background"}>
+        <View paddingBlock={"$4"} paddingInline={"$4"}>
+          <YGroup rowGap={"$0.5"}>
+            {formattedFilterData.map((filter, index) => (
+              <YGroup.Item key={index}>{RenderFilterItem(filter)}</YGroup.Item>
+            ))}
+          </YGroup>
+        </View>
+      </ScrollView>
     </>
   );
 };

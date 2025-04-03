@@ -8,8 +8,8 @@ export default function AppLayout () {
     return (
         <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
-            <Stack.Screen name="(modals)" options={{ presentation: "modal", headerShown: false }} />
-            <Stack.Screen name="(filters)" options={{ presentation: "modal", headerShown: false }} />
+            <Stack.Screen name="(modals)" options={{ presentation: "containedModal", headerShown: false }} />
+            <Stack.Screen name="(filters)" options={{ presentation: 'containedModal', headerShown: false }} />
         </Stack>
     )
 }

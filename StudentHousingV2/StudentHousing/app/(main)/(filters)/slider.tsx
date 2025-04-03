@@ -1,83 +1,131 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
-import { Text, Slider, H2, H4, H6, XStack, YStack } from "tamagui";
+import React, { useEffect, useState, useCallback } from "react";
+import { Text, Slider, H2, H4, H6, XStack, YStack, View } from "tamagui";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Header } from "@react-navigation/elements/src/Header/Header";
-import { Text as HeaderText } from "@react-navigation/elements/src/Text";
+import { HeaderWithBack } from ".";
+import { Filter } from "@/typings";
 
-const FilterSlider = () => {
+const FilterSlider: React.FC = () => {
   const { item } = useLocalSearchParams();
   if (!item) return null;
 
-  const { title, filter, options } = JSON.parse(
-    Array.isArray(item) ? item[0] : item
-  );
-  const { range, default: defaultValue, returnRange } = options;
-  const [min, max, step] = range;
+  const [filterData, setFilterData] = useState<Filter | null>(null);
+  const [range, setRange] = useState<[number, number, number]>([0, 0, 0]);
+  const [values, setValues] = useState<number[]>([]);
 
-  const initialState = returnRange
-    ? [defaultValue || min, max]
-    : [defaultValue || min];
+  // Parse the filter data from the route params
+  useEffect(() => {
+    // console.log("item", item);
+    try {
+      const parsedItem = JSON.parse(Array.isArray(item) ? item[0] : item);
+      setFilterData(parsedItem);
+      const { range: _range, default: defaultValue } = parsedItem.options;
+      setRange(_range);
 
-  const [values, setValues] = useState(initialState);
+      // Set initial default values based on the filter options
+      const initialState = parsedItem.options.returnRange
+        ? [defaultValue || _range[0], _range[1]]
+        : [defaultValue || _range[0]];
+      setValues(initialState);
+    } catch (err) {
+      console.error("Failed to parse filter data");
+    }
+  }, [item]);
 
-  const handleValueChange = async (newValues) => {
-    if (returnRange) {
-      // Ensure max doesn't go below min for range sliders
-      if (newValues[1] < newValues[0]) {
-        // If the second thumb (max) is trying to go below the first thumb (min),
-        // set the max value equal to the min value
-        newValues[1] = newValues[0];
+  // Load saved filters from AsyncStorage
+  const getSavedFilter = useCallback(async () => {
+    if (!filterData) return;
+
+    try {
+      const data = await AsyncStorage.getItem("filters");
+      if (!data) return;
+
+      const parsedData: { [key: string]: any } = JSON.parse(data);
+      const savedValue = parsedData[filterData.filter_key];
+
+      console.log("savedValue", savedValue);
+      if (savedValue) {
+        setValues(savedValue);
       }
+    } catch (err) {
+      console.error("Failed to load saved filters:", err);
+    }
+  }, [filterData]);
+
+  useEffect(() => {
+    if (filterData) {
+      getSavedFilter();
+    }
+  }, [filterData, getSavedFilter]);
+
+  const handleValueChange = async (newValues: number[]) => {
+    if (filterData?.options.returnRange && newValues[1] < newValues[0]) {
+      newValues[1] = newValues[0];
     }
     setValues(newValues);
   };
 
-  const getDisplayText = () => {
-    if (returnRange) {
-      return `${title}: ${values[0]} - ${values[1]}`;
-    } else {
-      return `${title}: ${values[0]}`;
+  const RenderThumb = React.memo(
+    ({ returnRange = false }: { returnRange: boolean }) => {
+      const value = returnRange
+        ? values?.[1] ?? range[0]
+        : values?.[0] ?? range[0];
+      return (
+        <Slider.Thumb
+          key={returnRange ? 1 : 0}
+          size={"$3"}
+          elevate
+          circular
+          index={returnRange ? 1 : 0}
+        >
+          <Text
+            fontSize="$4"
+            fontWeight="bold"
+            color={"white"}
+            position="relative"
+            y={-40}
+          >
+            {value}
+          </Text>
+        </Slider.Thumb>
+      );
     }
-  };
+  );
+
+  if (!filterData) return <></>;
 
   return (
     <>
-    <Header
-              title="Filters"
-              headerRight={() => {
-                return (
-                  <HeaderText onPress={() => {
-                    router.back();
-                  }}>
-                    Done
-                  </HeaderText>
-                )
-              }}
-              />
-    <YStack flex={1} bg={'$background'} paddingBlock="$4" space="$4">
-      <Text fontWeight="bold">{getDisplayText()}</Text>
-      <XStack items="center" space="$4">
-        <Text>{min}</Text>
-        <Slider
-          size="$4"
-          width={300}
-          defaultValue={initialState}
-          min={min}
-          max={max}
-          step={step}
-          onValueChange={handleValueChange}
-        >
-          <Slider.Track>
-            <Slider.TrackActive />
-          </Slider.Track>
-          <Slider.Thumb size={"$3"} circular index={0} />
-          {returnRange && <Slider.Thumb size={"$3"} circular index={1} />}
-        </Slider>
-        <Text>{max}</Text>
-      </XStack>
-    </YStack>
-          </>
+      <HeaderWithBack page={filterData.label} />
+      <YStack paddingInline={"$4"} flex={1} bg={"$background"}>
+        <XStack flex={1} items="center">
+          <Slider
+            position="relative"
+            flex={1}
+            size="$4"
+            value={values}
+            min={range[0]}
+            max={range[1]}
+            step={range[2]}
+            onValueChange={handleValueChange}
+            onSlideEnd={async () => {
+              const data = await AsyncStorage.getItem("filters");
+              const parsedData: { [key: string]: any } = data
+                ? JSON.parse(data)
+                : {};
+              parsedData[filterData.filter_key] = values;
+              AsyncStorage.setItem("filters", JSON.stringify(parsedData));
+            }}
+          >
+            <Slider.Track>
+              <Slider.TrackActive bg={"$yellow10"} />
+            </Slider.Track>
+            <RenderThumb returnRange={false} />
+            {filterData.options.returnRange && <RenderThumb returnRange />}
+          </Slider>
+        </XStack>
+      </YStack>
+    </>
   );
 };
 
