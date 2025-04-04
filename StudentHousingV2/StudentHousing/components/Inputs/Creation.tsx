@@ -9,22 +9,14 @@ import { useAuth } from "../AuthProvider";
 import supabase from "@/lib/supabase";
 import { View } from "tamagui";
 
-interface InputState {
-  text: [string, (value: string) => void];
-  multiSelect: [string[], (value: string[]) => void];
-  slider: [number, (value: number) => void];
-  date: [Date, (value: Date) => void];
-  media: [ImageObject[], (value: ImageObject[]) => void];
-}
-
 interface CreationInputFactoryProps {
   question: Question;
-  inputState: InputState;
+  state: [any, any];
 }
 
 export const CreationInputFactory = ({
   question,
-  inputState,
+  state,
 }: CreationInputFactoryProps) => {
   const { session } = useAuth();
 
@@ -60,43 +52,54 @@ export const CreationInputFactory = ({
 
       const sortedImages = newImages.sort((a, b) => a.order - b.order);
 
-      const [media, setMedia] = inputState.media;
+      const [inputState, setInputState] = state;
+      const newMedia = sortedImages;
 
-      setMedia(sortedImages);
+      setInputState({
+        ...inputState,
+        media: newMedia,
+      });
     } catch (error) {
       console.error("Image loading error:", error);
     }
   }, [session?.user?.id]);
 
+  const [inputState, setInputState] = state;
   switch (question.type) {
     case "text":
-      const [text, setText] = inputState.text;
-
-      return <CreationText question={question} setter={setText} value={text} />;
+      return (
+        <CreationText
+          question={question}
+          value={inputState.text}
+          state={state}
+        />
+      );
     case "multiSelect":
-      const [multiSelect, setMultiSelect] = inputState.multiSelect;
-
       return (
         <CreationMultiSelect
           question={question}
-          value={multiSelect}
-          setter={setMultiSelect}
+          value={inputState.multiSelect}
+          state={state}
         />
       );
 
     case "slider":
-      const [slider, setSlider] = inputState.slider;
       return (
-        <CreationSlider question={question} value={slider} setter={setSlider} />
+        <CreationSlider
+          question={question}
+          value={inputState.slider}
+          state={state}
+        />
       );
     case "date":
-      const [date, setDate] = inputState.date;
-      return <CreationDate question={question} value={date} setter={setDate} />;
+      return (
+        <CreationDate
+          question={question}
+          value={inputState.date}
+          state={state}
+        />
+      );
     case "media":
-      const [media, setMedia] = inputState.media;
-
-      if (!session) return <></>;
-
       return (
         <MediaUpload
           onLoad={() => {
@@ -109,7 +112,7 @@ export const CreationInputFactory = ({
             deleteImage(session, image);
           }}
           question={question}
-          images={media}
+          images={inputState.media as ImageObject[]}
         />
       );
     default:

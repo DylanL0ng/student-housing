@@ -7,15 +7,20 @@ import { Button } from "tamagui";
 export const CreationMultiSelect = ({
   question,
   value,
-  setter,
+  state,
 }: CreationInputProps) => {
+  const [inputState, setInputState] = state;
   const selectOption = useCallback(
     (interest_id: string) => {
       const newSelectedOptions = value.includes(interest_id)
         ? value.filter((i: string) => i !== interest_id)
         : [...value, interest_id];
 
-      setter(newSelectedOptions);
+      const newState = {
+        ...inputState,
+        [question.type]: newSelectedOptions,
+      };
+      setInputState(newState);
     },
     [value]
   );

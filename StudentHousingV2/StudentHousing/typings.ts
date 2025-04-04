@@ -88,7 +88,7 @@ export interface CreationDateProps {
     type: string;
     options?: any;
   };
-  setter: (value: any) => void;
+  state: any;
 }
 
 export interface CreationInputProps {
@@ -96,7 +96,7 @@ export interface CreationInputProps {
     type: string;
     options?: any;
   };
-  setter: (value: any) => void;
+  state: any;
   value: any;
 }
 

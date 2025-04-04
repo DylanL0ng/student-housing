@@ -5,10 +5,11 @@ import { Slider, Text, View } from "tamagui";
 
 export const CreationSlider = ({
   question,
-  setter,
+  state,
   value,
 }: CreationInputProps) => {
   const [options, setOptions] = useState<{ range: number[] }>({ range: [] });
+  const [inputState, setInputState] = state;
 
   useEffect(() => {
     if (
@@ -17,10 +18,14 @@ export const CreationSlider = ({
       question.options.range &&
       question.options.value
     ) {
-      setter(value);
+      const newData = {
+        ...inputState,
+        slider: value,
+      };
+      setInputState(newData);
       setOptions(question.options);
     }
-  }, []);
+  }, [state, question]);
 
   return (
     <View bg="$background04" borderColor="$borderColor" borderWidth="$1" p="$4">
@@ -37,7 +42,11 @@ export const CreationSlider = ({
       </View>
       <Slider
         onValueChange={([value]) => {
-          setter(value);
+          const newData = {
+            ...inputState,
+            slider: value,
+          };
+          setInputState(newData);
         }}
         defaultValue={[question.options?.value]}
         min={options.range[0]}

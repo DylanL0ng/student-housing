@@ -18,14 +18,16 @@ import {
 } from "react-native-safe-area-context";
 import TailwindColours from "@/constants/TailwindColours";
 import { useTheme, View } from "@tamagui/core";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { useRouteInfo } from "expo-router/build/hooks";
-import { Compass, MessageCircle, User } from "@tamagui/lucide-icons";
+import { Compass, Mail, MessageCircle, User } from "@tamagui/lucide-icons";
 
 export default function TabLayout() {
   const theme = useTheme();
   const navigation = useNavigation();
+
+  const [landlordMode, setLandlordMode] = useState(true);
 
   const insets = useSafeAreaInsets();
 
@@ -81,26 +83,15 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <User color={color} />,
         }}
       />
-      {/* <Tabs.Screen
-        name="interests"
-        options={{
-          title: "Interests",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="chats"
-        options={{
-          title: "Chats",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
-          ),
-        }}
-      />
-
-      /> */}
+      {landlordMode && (
+        <Tabs.Screen
+          name="requests"
+          options={{
+            title: "Requests",
+            tabBarIcon: ({ color }) => <Mail color={color} />,
+          }}
+        />
+      )}
     </Tabs>
   );
 }

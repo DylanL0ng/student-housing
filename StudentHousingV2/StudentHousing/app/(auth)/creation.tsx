@@ -37,19 +37,13 @@ const CreateScreen = () => {
       });
   }, []);
 
-  const [textInput, setTextInput] = useState("");
-  const [multiSelectInput, setMultiSelectInput] = useState<string[]>([]);
-  const [sliderInput, setSliderInput] = useState(0);
-  const [dateInput, setDateInput] = useState<Date>(new Date());
-  const [mediaInput, setMediaInput] = useState<ImageObject[]>([]);
-
-  const inputState = {
-    text: [textInput, setTextInput],
-    multiSelect: [multiSelectInput, setMultiSelectInput],
-    slider: [sliderInput, setSliderInput],
-    date: [dateInput, setDateInput],
-    media: [mediaInput, setMediaInput],
-  };
+  const [inputState, setInputState] = useState({
+    text: "",
+    multiSelect: [],
+    slider: 0,
+    date: new Date(),
+    media: [],
+  });
 
   const questions = useCallback(
     () => [
@@ -165,19 +159,24 @@ const CreateScreen = () => {
   const resetInputState = useCallback((type: string) => {
     switch (type) {
       case "text":
-        setTextInput("");
+        inputState.text = "";
+        setInputState({ ...inputState, text: "" });
         break;
       case "multiSelect":
-        setMultiSelectInput([]);
+        inputState.multiSelect = [];
+        setInputState({ ...inputState, multiSelect: [] });
         break;
       case "slider":
-        setSliderInput(0);
+        inputState.slider = 0;
+        setInputState({ ...inputState, slider: 0 });
         break;
       case "date":
-        setDateInput(new Date());
+        inputState.date = new Date();
+        setInputState({ ...inputState, date: new Date() });
         break;
       case "media":
-        setMediaInput([]);
+        inputState.media = [];
+        setInputState({ ...inputState, media: [] });
         break;
     }
   }, []);
@@ -326,7 +325,7 @@ const CreateScreen = () => {
                 <View style={{ width: "100%" }}>
                   <CreationInputFactory
                     question={questions()[questionIndex]}
-                    inputState={inputState}
+                    state={[inputState, setInputState]}
                   />
                 </View>
               </Animated.View>
