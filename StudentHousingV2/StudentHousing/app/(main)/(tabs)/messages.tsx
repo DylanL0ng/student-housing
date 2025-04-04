@@ -57,14 +57,39 @@ export default function MessagesScreen() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "connections" },
-        (payload) => {
+        async (payload) => {
           if (payload.eventType === "INSERT") {
             const newData = payload.new as { cohert1: string; cohert2: string };
             const userId = session?.user.id;
-            const newConnection =
+            const isNewConnection =
               userId === newData.cohert1 || userId === newData.cohert2;
 
-            if (!newConnection) return;
+            if (!isNewConnection) return;
+
+            const otherUserId =
+              userId === newData.cohert1 ? newData.cohert2 : newData.cohert1;
+
+            const { error, data } = await supabase.functions.invoke(
+              "fetch-connection",
+              {
+                body: {
+                  userId: otherUserId,
+                },
+              }
+            );
+
+            if (error) {
+              console.error("Error fetching connection:", error);
+              return;
+            }
+            if (!data) return;
+            const newConnection = data as User;
+
+            if (newConnection.has_conversation) {
+              setConversationHistory((prev) => [...prev, newConnection]);
+            } else {
+              setUnInteractedMatches((prev) => [...prev, newConnection]);
+            }
           }
         }
       )

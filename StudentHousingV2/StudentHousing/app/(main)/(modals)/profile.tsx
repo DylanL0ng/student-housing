@@ -1,5 +1,5 @@
 import ImageCollection from "@/components/Profile/ImageCollection";
-import { Profile as _Profile, Profile } from "@/typings";
+import { Profile } from "@/typings";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
@@ -20,17 +20,23 @@ const ProfileModal = () => {
     undefined
   );
 
-  const { media, title } = JSON.parse(
-    Array.isArray(profile) ? profile[0] : profile
-  ) as _Profile;
+  const [age, setAge] = useState(0);
 
   useEffect(() => {
     if (!profile) return;
-    setProfileData(JSON.parse(Array.isArray(profile) ? profile[0] : profile));
+    const parsedProfile = JSON.parse(
+      Array.isArray(profile) ? profile[0] : profile
+    ) as Profile;
+
+    console.log("Parsed Profile:", parsedProfile);
+    setProfileData(parsedProfile);
   }, [profile]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.color2.val }} edges={["top", "left", "right"]}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: theme.color2.val }}
+      edges={["top", "left", "right"]}
+    >
       <View bg={"$color2"} style={{ flex: 1 }}>
         <View
           bg={"$color2"}
@@ -45,11 +51,9 @@ const ProfileModal = () => {
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Text fontWeight={"800"} fontSize={"$8"} color={"$color"}>
-              {title}
+              {profileData?.title}
             </Text>
-            <Text fontWeight={"600"} fontSize={"$6"} color={"$color12"}>
-              {}
-            </Text>
+            <Text fontWeight={"600"} fontSize={"$6"} color={"$color12"}></Text>
           </View>
           <Button pressTheme circular={true} onPress={() => router.back()}>
             <X size={"$1"} color={"$color"} strokeWidth={2} />

@@ -144,6 +144,7 @@ const CreateScreen = () => {
   const backButtonPressed = useCallback(() => {
     setQuestionIndex((prevIndex) => prevIndex - 1);
   }, []);
+
   const cancelButtonPressed = useCallback(() => {
     supabase.auth.signOut();
     router.replace("/login");
@@ -161,7 +162,7 @@ const CreateScreen = () => {
 
   const [answers, setAnswers] = useState({});
 
-  const resetInputState = useCallback((type) => {
+  const resetInputState = useCallback((type: string) => {
     switch (type) {
       case "text":
         setTextInput("");
@@ -207,6 +208,7 @@ const CreateScreen = () => {
 
     if (questionIndex + 1 >= questions().length) {
       router.replace("/(main)/(tabs)");
+      console.log("Submitting data", newAnswer);
       // submit the data
     }
   }, [questionIndex, inputState, answers]);

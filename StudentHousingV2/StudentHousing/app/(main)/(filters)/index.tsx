@@ -1,24 +1,25 @@
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useEffect, useState, useCallback } from "react";
-import { ChevronRight } from "@tamagui/lucide-icons";
-import { YGroup, ListItem, ScrollView, View, Button } from "tamagui";
+import { ChevronRight, List } from "@tamagui/lucide-icons";
+import { YGroup, ListItem, ScrollView, View, Button, Switch } from "tamagui";
 import { Header } from "@react-navigation/elements/src/Header/Header";
 import supabase from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import { Text as HeaderText } from "@react-navigation/elements/src/Text";
+import { getSavedFilters } from "@/utils/filterUtils";
+import ToggleFilter from "./toggle";
 
 interface Filter {
-  id: number;
-  filter_id: string;
+  id: string;
   default: {
     data: any;
   };
   options: any;
+  description: string;
   group?: string;
   label: string;
-  description: string;
   filter_key: string;
   filter_table: string;
   filter_registry: {
@@ -36,6 +37,7 @@ export const HeaderWithText = ({
   return (
     <Header
       title={page}
+      headerRightContainerStyle={{ paddingRight: 24 }}
       headerRight={() => {
         return (
           <HeaderText
@@ -65,7 +67,6 @@ const FilterScreen = () => {
 
   const { filtersToSave } = useLocalSearchParams();
 
-  // Fetch original filters from Supabase
   const fetchFilters = async () => {
     const { data, error } = await supabase.from("filters").select(
       `
@@ -76,18 +77,15 @@ const FilterScreen = () => {
 
     if (error) {
       console.error("Error fetching filters:", error);
-      return;
+      return [];
     }
-    if (!data) return;
-
-    setFilterData(data as Filter[]);
+    return (data ?? []) as Filter[];
   };
 
-  // Format descriptions based on saved filter data
   const formatFilterDescriptions = useCallback(
     (filters: Filter[], savedData: Record<string, any>) => {
       return filters.map((filter: Filter) => {
-        let description = filter.description;
+        let description = "";
 
         if (savedData[filter.filter_key] !== undefined) {
           if (filter.filter_registry.type === "multiSelect") {
@@ -99,8 +97,6 @@ const FilterScreen = () => {
           } else if (filter.filter_registry.type === "slider") {
             const values = savedData[filter.filter_key];
             description = values.join(" - ");
-          } else if (typeof savedData[filter.filter_key] === "object") {
-            description = Object.keys(savedData[filter.filter_key]).join(", ");
           } else {
             description = String(savedData[filter.filter_key]);
           }
@@ -115,39 +111,16 @@ const FilterScreen = () => {
     []
   );
 
-  // Get saved filters from AsyncStorage
-  const getSavedFilters = async () => {
-    try {
-      const data = await AsyncStorage.getItem("filters");
-      const parsedData: { [key: string]: any } = data ? JSON.parse(data) : {};
-
-      // console.log("Saved filters:", parsedData);
-      setSavedFilterData(parsedData);
-
-      // If we already have filter data, update the formatted data immediately
-      if (filterData.length > 0) {
-        setFormattedFilterData(
-          formatFilterDescriptions(filterData, parsedData)
-        );
-      }
-    } catch (error) {
-      console.error("Error getting saved filters:", error);
-      setSavedFilterData({});
-    }
-  };
-
   // Refresh all data
   const refreshData = useCallback(async () => {
-    await getSavedFilters();
-    await fetchFilters();
+    setSavedFilterData(await getSavedFilters());
+    setFilterData(await fetchFilters());
   }, []);
 
-  // Initial data loading
   useEffect(() => {
     refreshData();
   }, [refreshData]);
 
-  // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       refreshData();
@@ -174,7 +147,7 @@ const FilterScreen = () => {
             subTitle={item.description}
             onPress={() =>
               router.navigate({
-                pathname: "/(filters)/multiSelect",
+                pathname: "/multiSelect",
                 params: {
                   item: JSON.stringify(item),
                   onReturn: "refresh",
@@ -192,7 +165,7 @@ const FilterScreen = () => {
             pressTheme
             onPress={() => {
               router.navigate({
-                pathname: "/(filters)/slider",
+                pathname: "/slider",
                 params: {
                   item: JSON.stringify(item),
                   onReturn: "refresh",
@@ -202,6 +175,8 @@ const FilterScreen = () => {
             iconAfter={ChevronRight}
           />
         );
+      case "toggle":
+        return <ToggleFilter item={item} />;
       case "map":
         return (
           <ListItem
@@ -209,7 +184,7 @@ const FilterScreen = () => {
             subTitle={item.description}
             onPress={() =>
               router.navigate({
-                pathname: "/(filters)/map",
+                pathname: "/map",
                 params: {
                   item: JSON.stringify(item),
                   onReturn: "refresh",
@@ -220,22 +195,7 @@ const FilterScreen = () => {
           />
         );
       default:
-        return (
-          <ListItem
-            title={item.label}
-            subTitle={item.description}
-            onPress={() =>
-              router.navigate({
-                pathname: "/(filters)/default",
-                params: {
-                  item: JSON.stringify(item),
-                  onReturn: "refresh",
-                },
-              })
-            }
-            iconAfter={ChevronRight}
-          />
-        );
+        return <></>;
     }
   };
   return (

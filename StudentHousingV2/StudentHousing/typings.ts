@@ -14,19 +14,33 @@ export interface User {
 }
 
 export interface Filter {
-  id: number;
-  filter_id: string;
+  // id: number;
+  id: string;
   default: {
     data: any;
   };
-  options: any;
+  options: FilterOptions;
   group?: string;
   label: string;
+  description: string;
   filter_key: string;
   filter_table: string;
   filter_registry: {
-    type: string;
+    type: FilterType;
   };
+}
+
+export type FilterType = "multiSelect" | "slider" | "map" | "default";
+
+export interface FilterOptions {
+  values?: Record<string, { label: string }>; // For multiSelect
+  range?: [number, number, number]; // [min, max, step] for slider
+  returnRange?: boolean; // For slider
+  default?: number; // For slider
+}
+
+export interface FilterState {
+  [key: string]: any; // The value type depends on the filter type
 }
 
 export interface Profile {
@@ -39,6 +53,7 @@ export interface Profile {
     point: { longitude: number; latitude: number };
     distance?: number;
   };
+  information: [];
   media: string[];
 }
 export interface Conversation {

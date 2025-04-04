@@ -27,7 +27,6 @@ const RootLayout = () => {
       return router.replace("/login");
     }
 
-    // console.log(data.created)
     if (data.created) return router.replace("/(main)/(tabs)");
 
     return router.replace("/creation");

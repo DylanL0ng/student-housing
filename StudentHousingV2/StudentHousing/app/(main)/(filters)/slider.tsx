@@ -1,9 +1,9 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState, useCallback } from "react";
-import { Text, Slider, H2, H4, H6, XStack, YStack, View } from "tamagui";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { Text, Slider, XStack, YStack } from "tamagui";
 import { HeaderWithBack } from ".";
 import { Filter } from "@/typings";
+import { getSavedFilters, saveFilter } from "@/utils/filterUtils";
 
 const FilterSlider: React.FC = () => {
   const { item } = useLocalSearchParams();
@@ -12,13 +12,29 @@ const FilterSlider: React.FC = () => {
   const [filterData, setFilterData] = useState<Filter | null>(null);
   const [range, setRange] = useState<[number, number, number]>([0, 0, 0]);
   const [values, setValues] = useState<number[]>([]);
+  const isMounted = useRef(true);
+  const pendingSave = useRef<Promise<void> | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // Parse the filter data from the route params
   useEffect(() => {
-    // console.log("item", item);
     try {
-      const parsedItem = JSON.parse(Array.isArray(item) ? item[0] : item);
+      const parsedItem = JSON.parse(
+        Array.isArray(item) ? item[0] : item
+      ) as Filter;
       setFilterData(parsedItem);
+
+      if (!parsedItem.options.range) {
+        console.error("Invalid filter options: range is required for slider");
+        return;
+      }
+
       const { range: _range, default: defaultValue } = parsedItem.options;
       setRange(_range);
 
@@ -28,23 +44,19 @@ const FilterSlider: React.FC = () => {
         : [defaultValue || _range[0]];
       setValues(initialState);
     } catch (err) {
-      console.error("Failed to parse filter data");
+      console.error("Failed to parse filter data:", err);
     }
   }, [item]);
 
   // Load saved filters from AsyncStorage
   const getSavedFilter = useCallback(async () => {
-    if (!filterData) return;
+    if (!filterData || !isMounted.current) return;
 
     try {
-      const data = await AsyncStorage.getItem("filters");
-      if (!data) return;
+      const savedFilters = await getSavedFilters();
+      const savedValue = savedFilters[filterData.filter_key];
 
-      const parsedData: { [key: string]: any } = JSON.parse(data);
-      const savedValue = parsedData[filterData.filter_key];
-
-      console.log("savedValue", savedValue);
-      if (savedValue) {
+      if (savedValue && isMounted.current) {
         setValues(savedValue);
       }
     } catch (err) {
@@ -59,10 +71,26 @@ const FilterSlider: React.FC = () => {
   }, [filterData, getSavedFilter]);
 
   const handleValueChange = async (newValues: number[]) => {
+    if (!isMounted.current) return;
+
     if (filterData?.options.returnRange && newValues[1] < newValues[0]) {
       newValues[1] = newValues[0];
     }
     setValues(newValues);
+  };
+
+  const handleSlideEnd = async () => {
+    if (!filterData || !isMounted.current) return;
+
+    // If there's a pending save, wait for it to complete
+    if (pendingSave.current) {
+      await pendingSave.current;
+    }
+
+    // Create a new save operation
+    pendingSave.current = saveFilter(filterData.filter_key, values);
+    await pendingSave.current;
+    pendingSave.current = null;
   };
 
   const RenderThumb = React.memo(
@@ -83,7 +111,7 @@ const FilterSlider: React.FC = () => {
             fontWeight="bold"
             color={"white"}
             position="relative"
-            y={-40}
+            y={-50}
           >
             {value}
           </Text>
@@ -92,7 +120,7 @@ const FilterSlider: React.FC = () => {
     }
   );
 
-  if (!filterData) return <></>;
+  if (!filterData) return null;
 
   return (
     <>
@@ -108,14 +136,7 @@ const FilterSlider: React.FC = () => {
             max={range[1]}
             step={range[2]}
             onValueChange={handleValueChange}
-            onSlideEnd={async () => {
-              const data = await AsyncStorage.getItem("filters");
-              const parsedData: { [key: string]: any } = data
-                ? JSON.parse(data)
-                : {};
-              parsedData[filterData.filter_key] = values;
-              AsyncStorage.setItem("filters", JSON.stringify(parsedData));
-            }}
+            onSlideEnd={handleSlideEnd}
           >
             <Slider.Track>
               <Slider.TrackActive bg={"$yellow10"} />

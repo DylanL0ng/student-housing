@@ -7,6 +7,8 @@ import supabase from "@/lib/supabase";
 
 import { View } from "tamagui";
 import Loading from "@/components/Loading";
+import { useFocusEffect } from "expo-router";
+import { getSavedFilters } from "@/utils/filterUtils";
 
 export default function HomeScreen() {
   const auth = useAuth();
@@ -17,11 +19,14 @@ export default function HomeScreen() {
   const requestUpdate = async () => {
     try {
       setIsLoading(true);
+
+      const filters = await getSavedFilters();
       const { data, error } = await supabase.functions.invoke(
         "searchForFlatmates",
         {
           body: {
             id: auth.session?.user.id,
+            filters: filters,
           },
         }
       );

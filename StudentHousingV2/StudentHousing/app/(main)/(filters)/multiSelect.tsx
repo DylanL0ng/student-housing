@@ -1,51 +1,63 @@
-import { router, useLocalSearchParams, useNavigation } from "expo-router";
-import React, { useEffect, useLayoutEffect, useState } from "react";
-
-import { Checkbox, ListItem, useTheme, View, YStack } from "tamagui";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState, useRef } from "react";
+import { Checkbox, ListItem, YStack } from "tamagui";
 import { Check as CheckIcon } from "@tamagui/lucide-icons";
-
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Filter } from "@/typings";
-
-import { Header } from "@react-navigation/elements/src/Header/Header";
-import { Text as HeaderText } from "@react-navigation/elements/src/Text";
-
-import { Button } from "@react-navigation/elements";
 import { HeaderWithBack } from ".";
+import { getSavedFilters, saveFilter } from "@/utils/filterUtils";
 
-const MultiSelect = () => {
+const MultiSelect: React.FC = () => {
   const { item } = useLocalSearchParams();
   if (!item) return null;
 
   const filter = JSON.parse(Array.isArray(item) ? item[0] : item) as Filter;
-  const theme = useTheme();
+  const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>(
+    {}
+  );
+  const isMounted = useRef(true);
+  const pendingSave = useRef<Promise<void> | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await AsyncStorage.getItem("filters");
-      const parsedData: { [key: string]: any } = data ? JSON.parse(data) : {};
+      if (!isMounted.current) return;
 
-      if (parsedData) {
-        setSelectedItems(parsedData[filter.filter_key]);
+      try {
+        const savedFilters = await getSavedFilters();
+        const savedValue = savedFilters[filter.filter_key];
+
+        if (savedValue && isMounted.current) {
+          setSelectedItems(savedValue);
+        }
+      } catch (error) {
+        console.error("Error loading saved filters:", error);
       }
     };
 
     fetchData();
-  }, []);
-
-  const [selectedItems, setSelectedItems] = useState<{
-    [key: string]: boolean;
-  }>({});
+  }, [filter.filter_key]);
 
   const handleCheckboxChange = async (itemLabel: string, checked: boolean) => {
+    if (!isMounted.current) return;
+
     const newSelectedItems = { ...selectedItems, [itemLabel]: checked };
     setSelectedItems(newSelectedItems);
 
-    const data = await AsyncStorage.getItem("filters");
-    const parsedData: { [key: string]: any } = data ? JSON.parse(data) : {};
-    parsedData[filter.filter_key] = newSelectedItems;
+    // If there's a pending save, wait for it to complete
+    if (pendingSave.current) {
+      await pendingSave.current;
+    }
 
-    AsyncStorage.setItem("filters", JSON.stringify(parsedData));
+    // Create a new save operation
+    pendingSave.current = saveFilter(filter.filter_key, newSelectedItems);
+    await pendingSave.current;
+    pendingSave.current = null;
   };
 
   const RenderCheckbox = (itemLabel: string) => {
@@ -75,7 +87,7 @@ const MultiSelect = () => {
         rowGap={"$2"}
         gap={"$2"}
       >
-        {Object.entries(filter.options.values).map(([_, item]: any) => (
+        {Object.entries(filter.options.values || {}).map(([_, item]: any) => (
           <ListItem
             key={item.label}
             onPress={() =>
@@ -84,7 +96,7 @@ const MultiSelect = () => {
             pressTheme
             title={item.label}
             iconAfter={() => RenderCheckbox(item.label)}
-          ></ListItem>
+          />
         ))}
       </YStack>
     </>

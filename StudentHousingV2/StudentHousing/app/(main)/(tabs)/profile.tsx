@@ -30,6 +30,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (tabMode === "preview") {
       (async () => {
+        console.log("Fetching profile...");
         const { data, error } = await supabase.functions.invoke(
           "fetch-connection",
           {
@@ -39,7 +40,13 @@ export default function ProfileScreen() {
           }
         );
 
+        console.log("Response from function:", data);
+        console.log("Response error:", error);
+
         data as Profile;
+
+        console.log("Fetched Profile:", data);
+        console.log("Error:", error);
 
         if (error) {
           console.error("Error fetching profile:", error);
