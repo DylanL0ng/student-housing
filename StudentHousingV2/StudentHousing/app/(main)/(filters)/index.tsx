@@ -4,8 +4,6 @@ import { ChevronRight, List } from "@tamagui/lucide-icons";
 import { YGroup, ListItem, ScrollView, View, Button, Switch } from "tamagui";
 import { Header } from "@react-navigation/elements/src/Header/Header";
 import supabase from "@/lib/supabase";
-import { useAuth } from "@/components/AuthProvider";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import { Text as HeaderText } from "@react-navigation/elements/src/Text";
 import { getSavedFilters } from "@/utils/filterUtils";
@@ -97,6 +95,14 @@ const FilterScreen = () => {
           } else if (filter.filter_registry.type === "slider") {
             const values = savedData[filter.filter_key];
             description = values.join(" - ");
+          } else if (filter.filter_registry.type === "toggle") {
+            const value = savedData[filter.filter_key];
+            const { data } = filter.options;
+            description = value ? data[0] : data[1];
+          } else if (filter.filter_registry.type === "location") {
+            const value = savedData[filter.filter_key];
+            console.log("Location value", value);
+            // description = `${value.latitude}, ${value.longitude}`;
           } else {
             description = String(savedData[filter.filter_key]);
           }
@@ -177,7 +183,7 @@ const FilterScreen = () => {
         );
       case "toggle":
         return <ToggleFilter item={item} />;
-      case "map":
+      case "location":
         return (
           <ListItem
             title={item.label}

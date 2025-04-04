@@ -29,7 +29,7 @@ const ToggleFilter = ({ item }: { item: Filter }) => {
       onPress={handleToggle}
       iconAfter={() => {
         return (
-          <Switch checked={isToggled} onPress={handleToggle}>
+          <Switch size={"$1"} checked={isToggled} onPress={handleToggle}>
             <Switch.Thumb animation="quicker" />
           </Switch>
         );

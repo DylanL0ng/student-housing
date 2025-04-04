@@ -1,6 +1,6 @@
 import ConversationMini from "@/components/ConversationMini";
 import MatchedProfileMini from "@/components/MatchedProfileMini";
-import { Conversation, Relationship, User } from "@/typings";
+import { Conversation, Profile, Relationship, User } from "@/typings";
 import React, { useCallback, useContext, useEffect, useState } from "react";
 import { FlatList, SafeAreaView } from "react-native";
 import { StyleSheet } from "react-native";
@@ -16,37 +16,44 @@ export default function MessagesScreen() {
 
   if (!session) return <></>;
 
-  const [conversationHistory, setConversationHistory] = useState<User[]>([]);
-  const [unInteractedMatches, setUnInteractedMatches] = useState<User[]>([]);
+  const [conversationHistory, setConversationHistory] = useState<Profile[]>([]);
+  const [unInteractedMatches, setUnInteractedMatches] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
-    supabase.functions
-      .invoke("fetch-connections", {
-        body: {
-          userId: session.user.id,
-        },
-      })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Error fetching connections:", error);
-          return;
+    (async () => {
+      const { data, error } = await supabase.functions.invoke(
+        "getConnections",
+        {
+          body: {
+            userId: session?.user.id,
+          },
         }
+      );
 
-        data as User[];
+      if (error) {
+        console.error("Error fetching connections:", error);
+        return;
+      }
+      if (!data) {
+        console.error("No connections found");
+        return;
+      }
 
-        const _conversationHistory = data.filter(
-          (user: User & { has_conversation: boolean }) => user.has_conversation
-        );
-        const _unInteractedMatches = data.filter(
-          (user: User & { has_conversation: boolean }) => !user.has_conversation
-        );
+      console.log("Connections data:", data);
 
-        setConversationHistory(_conversationHistory);
-        setUnInteractedMatches(_unInteractedMatches);
-        setIsLoading(false);
-      });
+      const _conversationHistory = data.filter(
+        (profile: Profile & { has_conversation: boolean }) => true
+      );
+      const _unInteractedMatches = data.filter(
+        (profile: Profile & { has_conversation: boolean }) => !true
+      );
+
+      setConversationHistory(_conversationHistory);
+      setUnInteractedMatches(_unInteractedMatches);
+      setIsLoading(false);
+    })();
   }, []);
 
   const realtimeSubscription = () => {
@@ -70,7 +77,7 @@ export default function MessagesScreen() {
               userId === newData.cohert1 ? newData.cohert2 : newData.cohert1;
 
             const { error, data } = await supabase.functions.invoke(
-              "fetch-connection",
+              "getProfile",
               {
                 body: {
                   userId: otherUserId,
@@ -83,7 +90,7 @@ export default function MessagesScreen() {
               return;
             }
             if (!data) return;
-            const newConnection = data as User;
+            const newConnection = data as Profile;
 
             if (newConnection.has_conversation) {
               setConversationHistory((prev) => [...prev, newConnection]);
@@ -112,7 +119,7 @@ export default function MessagesScreen() {
             };
 
             const { error, data } = await supabase.functions.invoke(
-              "fetch-connection",
+              "getProfile",
               {
                 body: {
                   userId: newData.conversation_id,
@@ -126,14 +133,11 @@ export default function MessagesScreen() {
             }
             if (!data) return;
 
-            const newConversation = data as User;
+            const newConversation = data as Profile;
 
             setConversationHistory((prev) => [...prev, newConversation]);
-
             setUnInteractedMatches((prev) =>
-              prev.filter(
-                (user) => user.profile?.id !== newConversation.profile.id
-              )
+              prev.filter((profile) => profile?.id !== newConversation.id)
             );
           }
         }

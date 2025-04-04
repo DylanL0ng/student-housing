@@ -12,7 +12,7 @@ import { getSavedFilters } from "@/utils/filterUtils";
 
 export default function HomeScreen() {
   const auth = useAuth();
-  const [users, setUsers] = useState<User[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -22,7 +22,7 @@ export default function HomeScreen() {
 
       const filters = await getSavedFilters();
       const { data, error } = await supabase.functions.invoke(
-        "searchForFlatmates",
+        "getDiscoveryProfiles",
         {
           body: {
             id: auth.session?.user.id,
@@ -31,12 +31,14 @@ export default function HomeScreen() {
         }
       );
 
+      console.log("Fetched profiles:", data);
+
       if (error) {
-        console.error("Error fetching users:", error);
+        console.error("Error fetching profiles:", error);
         return;
       }
 
-      setUsers(data || []);
+      setProfiles(data || []);
     } catch (err) {
       console.error("Unexpected error:", err);
     } finally {
@@ -49,7 +51,7 @@ export default function HomeScreen() {
   }, []);
 
   const handleSwipeRight = async ({ index }: { index: number }) => {
-    const target = users[index];
+    const target = profiles[index];
     if (!auth.session?.user.id) {
       console.error("User not authenticated.");
       return;
@@ -62,7 +64,7 @@ export default function HomeScreen() {
         .or(
           `cohert1.eq.${auth.session?.user.id},cohert2.eq.${auth.session?.user.id}`
         )
-        .or(`cohert1.eq.${target.profile.id},cohert2.eq.${target.profile.id}`);
+        .or(`cohert1.eq.${target.id},cohert2.eq.${target.id}`);
 
       if (checkError) {
         console.error("Error checking interaction:", checkError);
@@ -74,7 +76,7 @@ export default function HomeScreen() {
           .from("connections")
           .insert({
             cohert1: auth.session?.user.id,
-            cohert2: target.profile.id,
+            cohert2: target.id,
             type: "flatmate",
           });
 
@@ -90,7 +92,7 @@ export default function HomeScreen() {
         .from("profile_interactions")
         .insert({
           cohert1: auth.session?.user.id,
-          cohert2: target.profile.id,
+          cohert2: target.id,
           type: "like",
         });
 
@@ -119,7 +121,7 @@ export default function HomeScreen() {
       });
   };
 
-  if (isLoading || users.length === 0) {
+  if (profiles.length === 0) {
     return <Loading title="Searching for profiles" />;
   }
 
@@ -129,10 +131,13 @@ export default function HomeScreen() {
         onSwipeLeft={handleSwipeLeft}
         onSwipeRight={handleSwipeRight}
         requestUpdate={requestUpdate}
-        data={users.map((user) => ({
-          profile: user.profile,
-          id: user.id,
-        }))}
+        data={profiles.map(
+          (profile) =>
+            profile && {
+              profile: profile,
+              id: profile.id,
+            }
+        )}
         Card={ProfileCard}
         style={{ marginTop: 16, margin: 16 }}
       />

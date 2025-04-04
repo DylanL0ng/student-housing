@@ -2,12 +2,39 @@ import ImageCollection from "@/components/Profile/ImageCollection";
 import { Profile } from "@/typings";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 
-import { Text, useTheme, View, Button } from "tamagui";
+import { Text, useTheme, View, Button, ScrollView } from "tamagui";
 import { X } from "@tamagui/lucide-icons";
+
+interface ProfileInformation {
+  key: string;
+  label: string;
+  priority_order: number;
+}
+
+interface ProfileInformationPromptData {
+  value: string;
+  prompt_id: string;
+}
+
+interface ProfileInformationPrompt extends ProfileInformation {
+  value: { data: ProfileInformationPromptData[] };
+}
+
+interface ProfileInformationGender extends ProfileInformation {
+  value: { data: "Male" | "Female" };
+}
+
+interface ProfileInformationBudget extends ProfileInformation {
+  value: { data: number };
+}
+
+interface ProfileInformationBio extends ProfileInformation {
+  value: { data: string };
+}
 
 const ProfileModal = () => {
   const router = useRouter();
@@ -20,6 +47,8 @@ const ProfileModal = () => {
     undefined
   );
 
+  const [profileInformation, setProfileInformation] = useState<[]>([]);
+
   const [age, setAge] = useState(0);
 
   useEffect(() => {
@@ -28,9 +57,44 @@ const ProfileModal = () => {
       Array.isArray(profile) ? profile[0] : profile
     ) as Profile;
 
-    console.log("Parsed Profile:", parsedProfile);
+    const information = parsedProfile.information;
     setProfileData(parsedProfile);
+    setProfileInformation(information);
   }, [profile]);
+
+  const RenderProfileItem = ({ item }: { item: any }) => {
+    switch (item.key) {
+      case "prompt":
+        item as ProfileInformationPrompt;
+        return (
+          <View display="flex" gap={"$2"}>
+            {item.value.data.map(
+              (prompt: ProfileInformationPromptData, index: number) => {
+                return (
+                  <View
+                    overflow="hidden"
+                    paddingBlock={"$8"}
+                    paddingInline={"$4"}
+                    bg={"$color4"}
+                    display="flex"
+                    gap={"$2"}
+                    key={index}
+                    style={{
+                      borderRadius: 16,
+                    }}
+                  >
+                    <Text fontWeight={"bold"} fontSize={"$3"}>
+                      Test
+                    </Text>
+                    <Text fontSize={"$8"}>{prompt.value}</Text>
+                  </View>
+                );
+              }
+            )}
+          </View>
+        );
+    }
+  };
 
   return (
     <SafeAreaView
@@ -59,15 +123,11 @@ const ProfileModal = () => {
             <X size={"$1"} color={"$color"} strokeWidth={2} />
           </Button>
         </View>
-        <ScrollView
-          style={{
-            flex: 1,
-          }}
-        >
+        <ScrollView marginInline={"$4"}>
           {profileData &&
             profileData.media.map((item: string, index: number) => (
               <View
-                marginBlock={"$1"}
+                marginBlock={"$2"}
                 key={index}
                 aspectRatio={0.75}
                 flex={1}
@@ -84,26 +144,10 @@ const ProfileModal = () => {
                 />
               </View>
             ))}
-          <View
-            flex={1}
-            bg={"$color02"}
-            style={{ borderRadius: 16, overflow: "hidden" }}
-            gap={8}
-          >
-            <Text color={"$color"} fontWeight={"bold"} fontSize={"$4"} flex={1}>
-              My interests are
-            </Text>
-            <View flex={1} flexDirection="row" gap={8} paddingBlock={"$2"}>
-              {profileData &&
-                profileData.interests.map((item: string, index: number) => (
-                  <View key={index}>
-                    <Button color={"$color"} outline="true" size="$1">
-                      {item}
-                    </Button>
-                  </View>
-                ))}
-            </View>
-          </View>
+          {profileInformation &&
+            profileInformation.map((item: any, index: number) => {
+              return <RenderProfileItem key={index} item={item} />;
+            })}
         </ScrollView>
       </View>
     </SafeAreaView>

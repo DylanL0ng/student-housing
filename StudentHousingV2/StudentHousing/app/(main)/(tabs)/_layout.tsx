@@ -12,16 +12,22 @@ import {
   Ionicons,
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import TailwindColours from "@/constants/TailwindColours";
 import { useTheme, View } from "@tamagui/core";
 import { useEffect } from "react";
 import Header from "@/components/Header";
 import { useRouteInfo } from "expo-router/build/hooks";
+import { Compass, MessageCircle, User } from "@tamagui/lucide-icons";
 
 export default function TabLayout() {
   const theme = useTheme();
   const navigation = useNavigation();
+
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     navigation.setOptions({
@@ -34,7 +40,7 @@ export default function TabLayout() {
       screenOptions={{
         tabBarStyle: {
           borderTopWidth: 0,
-          height: 60,
+          height: insets.bottom + 40,
         },
         tabBarBackground: () => (
           <View
@@ -45,12 +51,12 @@ export default function TabLayout() {
 
         tabBarButton: (props) => <Pressable {...props} />,
         tabBarIconStyle: {
-          color: TailwindColours.text.muted,
+          color: theme.color02.val,
         },
         tabBarLabelStyle: {
-          color: TailwindColours.text.muted,
+          color: theme.color02.val,
         },
-        tabBarActiveTintColor: theme.color11.val,
+        tabBarActiveTintColor: theme.white1.val,
         headerShown: false,
       }}
     >
@@ -58,31 +64,21 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Discover",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="compass" size={24} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Compass color={color} />,
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
           title: "Messages",
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons
-              name="message-minus"
-              size={24}
-              color={color}
-            />
-          ),
+          tabBarIcon: ({ color }) => <MessageCircle color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color }) => (
-            <FontAwesome5 name="user-alt" size={24} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <User color={color} />,
         }}
       />
       {/* <Tabs.Screen

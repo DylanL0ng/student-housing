@@ -9,6 +9,7 @@ import { Profile } from "@/typings";
 import { useAuth } from "@/components/AuthProvider";
 import Loading from "@/components/Loading";
 import { Tabs, Text } from "tamagui";
+import { cs_CZ } from "@faker-js/faker/.";
 
 export default function ProfileScreen() {
   const { session } = useAuth();
@@ -28,36 +29,29 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
 
   useEffect(() => {
+    (async () => {})();
+  }, []);
+
+  useEffect(() => {
     if (tabMode === "preview") {
       (async () => {
-        console.log("Fetching profile...");
-        const { data, error } = await supabase.functions.invoke(
-          "fetch-connection",
-          {
-            body: {
-              userId: session?.user.id, // Replace with the actual user ID
-            },
-          }
-        );
-
-        console.log("Response from function:", data);
-        console.log("Response error:", error);
-
-        data as Profile;
-
-        console.log("Fetched Profile:", data);
-        console.log("Error:", error);
+        const { data, error } = await supabase.functions.invoke("getProfile", {
+          body: {
+            userId: session?.user.id,
+          },
+        });
 
         if (error) {
           console.error("Error fetching profile:", error);
           return;
         }
 
-        if (data) {
-          setProfile(data.profile);
-        } else {
-          console.error("No profile found");
+        if (!data || data.length === 0) {
+          return console.error("No profile found");
         }
+
+        const profile = data[0] as Profile;
+        setProfile(profile);
       })();
     }
   }, [tabMode]);

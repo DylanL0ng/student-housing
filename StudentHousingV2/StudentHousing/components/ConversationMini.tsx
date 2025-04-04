@@ -1,12 +1,12 @@
-import { Conversation, User } from "@/typings";
+import { Conversation, Profile, User } from "@/typings";
 import { Entypo } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import { Text, useTheme, View } from "tamagui";
-const ConversationMini = (conversation: Conversation) => {
-  const recentMessage = conversation.latest_message;
+const ConversationMini = (profile: Profile) => {
+  const recentMessage = profile.latest_message;
   const yourTurn = true;
 
   const theme = useTheme();
@@ -17,7 +17,7 @@ const ConversationMini = (conversation: Conversation) => {
     router.push({
       pathname: "/message_thread",
       params: {
-        conversationId: conversation.id,
+        profile: JSON.stringify(profile),
       },
     });
   };
@@ -37,14 +37,14 @@ const ConversationMini = (conversation: Conversation) => {
           <Image
             style={styles.profileImage}
             transition={0}
-            source={conversation.profile.media[0]}
+            source={profile?.media[0]}
           />
         </View>
 
         <View style={styles.messageContainer}>
           <View style={styles.headerRow}>
             <Text color={"$color"} style={styles.fontBold}>
-              {conversation.profile.title}
+              {profile.title}
             </Text>
             {yourTurn && (
               <View

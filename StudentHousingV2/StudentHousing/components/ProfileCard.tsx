@@ -26,6 +26,7 @@ const calculateAge = (timestamptz: string) => {
 };
 
 const ProfileCard = ({ profile }: { profile: Profile }) => {
+  console.log("ProfileCard", profile);
   return (
     <View style={styles.body}>
       <View style={styles.float}>
@@ -52,14 +53,14 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
             </Text>
             <Text style={styles.personalInfoEntryText}>€750</Text>
           </View> */}
-          <View style={styles.personalInfoEntryWrapper}>
+          {/* <View style={styles.personalInfoEntryWrapper}>
             <Text>
               <Entypo name="location-pin" color={"#e5e7eb"} size={32} />
             </Text>
             <Text style={styles.personalInfoLocationText}>
               {profile.location.city} - {profile.location.distance} km away
             </Text>
-          </View>
+          </View> */}
         </View>
         <View
           style={{
@@ -89,7 +90,7 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
       <TouchableOpacity
         onPress={() =>
           router.push({
-            pathname: "/(modals)/profile",
+            pathname: "/(main)/(modals)/profile",
             params: {
               profile: JSON.stringify(profile),
             },
