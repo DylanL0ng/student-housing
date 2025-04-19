@@ -6,12 +6,12 @@ import { StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import { Text, View } from "tamagui";
 
-const MatchedProfileMini = (props: { profile: Profile }) => {
+const MatchedProfileMini = (profile: Profile) => {
   const openConversation = async () => {
     router.push({
       pathname: "/message_thread",
       params: {
-        conversationId: props.profile.id,
+        profile: JSON.stringify(profile),
       },
     });
   };
@@ -19,11 +19,7 @@ const MatchedProfileMini = (props: { profile: Profile }) => {
   return (
     <TouchableOpacity onPress={openConversation} activeOpacity={0.95}>
       <View style={styles.container}>
-        <Image
-          style={styles.inset}
-          source={props.profile.media[0]}
-          transition={0}
-        />
+        <Image style={styles.inset} source={profile.media[0]} transition={0} />
         <LinearGradient
           colors={["transparent", "rgba(0,0,0,0.9)"]}
           locations={[0.3, 1.0]}
@@ -31,7 +27,7 @@ const MatchedProfileMini = (props: { profile: Profile }) => {
         />
       </View>
       <Text color={"$color08"} style={styles.text}>
-        {props.profile.title || "Unknown"}
+        {profile.title || "Unknown"}
       </Text>
     </TouchableOpacity>
   );

@@ -12,22 +12,28 @@ import { Check as CheckIcon } from "@tamagui/lucide-icons";
 import { router, useNavigation } from "expo-router";
 import { useAuth } from "@/components/AuthProvider";
 import supabase from "@/lib/supabase";
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { Header } from "@react-navigation/elements/src/Header/Header";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SettingsPage = () => {
+  const [landlordMode, setLandlordMode] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const _landlordMode = await AsyncStorage.getItem("landlordMode");
+      setLandlordMode(_landlordMode === "true");
+    })();
+  }, [landlordMode]);
+
+  const onPress = async () => {
+    const mode = !landlordMode;
+    await AsyncStorage.setItem("landlordMode", `${mode}`);
+    setLandlordMode(mode);
+  };
+
   const checkbox = (itemLabel: string) => {
     return (
-      <Checkbox
-        size="$4"
-        // onCheckedChange={(checked) => {
-        //   setSelectedItems((prev) => ({
-        //     ...prev,
-        //     [itemLabel]: checked === true,
-        //   }));
-        // }}
-        // checked={selectedItems[itemLabel] || false}
-      >
+      <Checkbox onPress={onPress} defaultChecked={landlordMode} size="$4">
         <Checkbox.Indicator>
           <CheckIcon />
         </Checkbox.Indicator>
@@ -58,6 +64,7 @@ const SettingsPage = () => {
                 subTitle={"Toggle into the landlord dashboard"}
                 pressTheme
                 iconAfter={() => checkbox("Landlord mode")}
+                onPress={onPress}
               ></ListItem>
             </YGroup.Item>
             <YGroup.Item key={2}>

@@ -18,8 +18,6 @@ const RootLayout = () => {
       .eq("id", session.user.id)
       .single();
 
-    console.log("Session data:", data);
-
     if (error) {
       supabase.auth.signOut();
       return router.replace("/login");

@@ -22,10 +22,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const Header: React.FC<{
-  profile: Profile;
+  profile: any;
 }> = ({ profile }) => {
-  // const [profile, setProfile] = useState<Profile>();
-
   const gotoUserProfile = () => {
     router.push({
       pathname: "/profile",
@@ -34,27 +32,6 @@ const Header: React.FC<{
       },
     });
   };
-
-  // useEffect(() => {
-  //   const fetchProfile = async () => {
-  //     const { data, error } = await supabase.functions.invoke(
-  //       "get_profile_data",
-  //       {
-  //         body: {
-  //           userId: profile.id,
-  //         },
-  //       }
-  //     );
-
-  //     if (error) {
-  //       console.error("Error fetching profile:", error);
-  //     } else {
-  //       setProfile(data.profile);
-  //     }
-  //   };
-
-  //   fetchProfile();
-  // }, [conversationId]);
 
   const theme = useTheme();
 
@@ -129,9 +106,10 @@ const MessageThread = () => {
   const [messageHistory, setMessageHistory] = useState<TextMessageProps[]>([]);
 
   const { profile } = useLocalSearchParams<{ profile: string }>();
-  const theme = useTheme();
 
   const parsedProfile = JSON.parse(profile) as Profile;
+  const conversationId = parsedProfile.conversations[0].conversation_id;
+  const theme = useTheme();
 
   const getMessageHistory = async (conversation_id: string) => {
     const userId = session!.user.id;
@@ -156,7 +134,7 @@ const MessageThread = () => {
 
   useEffect(() => {
     setMessageHistory([]);
-    getMessageHistory(parsedProfile.id);
+    getMessageHistory(conversationId);
 
     const channel = supabase.channel("messages");
     channel
@@ -180,49 +158,28 @@ const MessageThread = () => {
     return () => {
       channel.unsubscribe();
     };
-  }, [parsedProfile.id]);
+  }, [conversationId]);
 
   const sendMessage = async () => {
     if (!session?.user.id) return;
 
     const userId = session.user.id;
-    let conversation_id = parsedProfile.id;
-
     try {
       const { data: existingConversation, error: checkError } = await supabase
         .from("conversation_registry")
-        .select("id")
-        .eq("id", conversation_id)
+        .select("conversation_id")
+        .eq("conversation_id", conversationId)
         .single();
-
-      if (checkError && checkError.code !== "PGRST116") {
-        console.error("Error checking conversation:", checkError);
-        return;
-      }
 
       if (!existingConversation) {
         const { data: newConversation, error: createError } = await supabase
           .from("conversation_registry")
-          .insert({ id: conversation_id })
-          .select("id")
+          .insert({ conversation_id: conversationId })
+          .select("conversation_id")
           .single();
 
         if (createError) {
           console.error("Error creating conversation:", createError);
-          return;
-        }
-
-        if (newConversation) conversation_id = newConversation.id;
-
-        const { error: membersError } = await supabase
-          .from("conversation_members")
-          .upsert([
-            { conversation_id: conversation_id, user_id: userId },
-            { conversation_id: conversation_id, user_id: conversation_id },
-          ]);
-
-        if (membersError) {
-          console.error("Error adding members to conversation:", membersError);
           return;
         }
       }
@@ -230,7 +187,7 @@ const MessageThread = () => {
       const message: TextMessageProps = {
         content: textInputMessage,
         sender_id: userId,
-        conversation_id: conversation_id,
+        conversation_id: conversationId,
         status: "sending" as const,
         sender: true,
       };
@@ -240,7 +197,7 @@ const MessageThread = () => {
       const { error } = await supabase.from("conversation_messages").insert({
         content: textInputMessage,
         sender_id: userId,
-        conversation_id: conversation_id,
+        conversation_id: conversationId,
         status: "delivered",
       });
 

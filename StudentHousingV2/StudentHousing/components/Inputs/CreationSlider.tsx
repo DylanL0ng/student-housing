@@ -10,25 +10,28 @@ export const CreationSlider = ({
 }: CreationInputProps) => {
   const [options, setOptions] = useState<{ range: number[] }>({ range: [] });
   const [inputState, setInputState] = state;
+  const [sliderValue, setSliderValue] = useState<number>(
+    value || question.options?.value
+  );
 
   useEffect(() => {
-    if (
-      question &&
-      question.options &&
-      question.options.range &&
-      question.options.value
-    ) {
-      const newData = {
-        ...inputState,
-        slider: value,
-      };
-      setInputState(newData);
-      setOptions(question.options);
-    }
-  }, [state, question]);
+    setInputState((prev) => ({
+      ...prev,
+      slider: value,
+    }));
+    setSliderValue(value);
+    setOptions(question.options);
+  }, []);
 
   return (
-    <View bg="$background04" borderColor="$borderColor" borderWidth="$1" p="$4">
+    <View
+      bg="$background04"
+      borderColor="$borderColor"
+      borderWidth="$1"
+      gap={"$5"}
+      paddingBlock="$4"
+      paddingInline="$4"
+    >
       <View flexDirection="row" justify="space-between" marginEnd="$4">
         <Text color="$color12" fontSize="$3">
           €{options?.range[0]}
@@ -42,13 +45,14 @@ export const CreationSlider = ({
       </View>
       <Slider
         onValueChange={([value]) => {
-          const newData = {
-            ...inputState,
-            slider: value,
-          };
-          setInputState(newData);
+          setInputState((prev) => {
+            return {
+              ...prev,
+              slider: value,
+            };
+          });
         }}
-        defaultValue={[question.options?.value]}
+        defaultValue={[sliderValue]}
         min={options.range[0]}
         max={options?.range[1]}
         step={options.range[2]}

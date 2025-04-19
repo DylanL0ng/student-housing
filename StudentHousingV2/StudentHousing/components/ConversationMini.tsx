@@ -6,11 +6,13 @@ import { StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import { Text, useTheme, View } from "tamagui";
 const ConversationMini = (profile: Profile) => {
-  const recentMessage = profile.latest_message;
-  const yourTurn = true;
+  console.log("conversation mini", profile);
+  const conversation = profile.conversations[0];
+
+  const recentMessage = conversation.latest_message;
+  const yourTurn = recentMessage.sender_id === profile.id;
 
   const theme = useTheme();
-
   const router = useRouter();
 
   const openConversation = () => {
@@ -28,10 +30,9 @@ const ConversationMini = (profile: Profile) => {
         paddingInline={"$2"}
         paddingBlock={"$2"}
         rounded={"$2"}
-        style={{
-          ...styles.container,
-          ...{ backgroundColor: "hsla(0, 0%, 50%, 0.05)" },
-        }}
+        bg={yourTurn ? "$color2" : "$color1"}
+        flexDirection="row"
+        items={"center"}
       >
         <View style={styles.profile}>
           <Image
@@ -41,9 +42,9 @@ const ConversationMini = (profile: Profile) => {
           />
         </View>
 
-        <View style={styles.messageContainer}>
-          <View style={styles.headerRow}>
-            <Text color={"$color"} style={styles.fontBold}>
+        <View paddingStart={"$2"}>
+          <View flexDirection={"row"} justify={"space-between"} width={"75%"}>
+            <Text color={"$color"} fontWeight={"bold"}>
               {profile.title}
             </Text>
             {yourTurn && (
@@ -69,7 +70,7 @@ const ConversationMini = (profile: Profile) => {
               numberOfLines={1}
               ellipsizeMode="tail"
             >
-              {recentMessage}
+              {recentMessage.content}
             </Text>
           </View>
         </View>

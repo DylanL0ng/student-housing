@@ -26,7 +26,6 @@ const calculateAge = (timestamptz: string) => {
 };
 
 const ProfileCard = ({ profile }: { profile: Profile }) => {
-  console.log("ProfileCard", profile);
   return (
     <View style={styles.body}>
       <View style={styles.float}>
