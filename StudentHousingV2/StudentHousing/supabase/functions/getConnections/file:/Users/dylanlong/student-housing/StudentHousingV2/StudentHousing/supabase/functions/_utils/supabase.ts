@@ -124,7 +124,7 @@ export const getUserData = async (userId, { minimal, exclude }) => {
   if (typeof userId === "string") {
     userId = [userId];
   }
-  console.log("Fetching user data for IDs:", userId, minimal);
+  // console.log("Fetching user data for IDs:", userId, minimal);
   //   if minimal is true we only return data that is needed for inital loading
   //   if minimal is false we return all data
 
@@ -189,7 +189,7 @@ export const getUserData = async (userId, { minimal, exclude }) => {
   // Get media URLs for all users
   const mediaUrls = await getMediaUrls(userId);
 
-  console.log("User data:", userData);
+  // console.log("User data:", userData);
   // Process the results to include only the most recent message for each conversation
   return userData.map((user) => {
     // If minimal mode, process conversation data to get most recent messages

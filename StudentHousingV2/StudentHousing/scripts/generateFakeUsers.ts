@@ -21,7 +21,7 @@ const interests = [
 const DEV_ID = "7edf42e0-d865-46c9-986a-0560837a02bc";
 
 export default async function generateFakeUsers(numUsers: number) {
-  // console.log(`Generating ${numUsers} fake users...`);
+  // // console.log(`Generating ${numUsers} fake users...`);
 
   for (let count = 0; count < numUsers; count++) {
     try {
@@ -111,11 +111,11 @@ export default async function generateFakeUsers(numUsers: number) {
         .from("profile_interactions")
         .insert({ cohert1: user_id, cohert2: DEV_ID, type: "like" });
 
-      // console.log(`Created user ${count + 1}/${numUsers}`);
+      // // console.log(`Created user ${count + 1}/${numUsers}`);
     } catch (error) {
       return console.error(`Failed to create user ${count + 1}:`, error);
     }
   }
 
-  // console.log("Finished generating users.");
+  // // console.log("Finished generating users.");
 }

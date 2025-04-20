@@ -20,34 +20,11 @@ const supabaseLogin = async (provider: "google" | "apple", token: string) => {
   });
 };
 
-const handleAppleSignIn = async () => {
-  try {
-    const credential = await AppleAuthentication.signInAsync({
-      requestedScopes: [
-        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-        AppleAuthentication.AppleAuthenticationScope.EMAIL,
-      ],
-    });
-
-    if (credential.identityToken) {
-      supabaseLogin("apple", credential.identityToken);
-    }
-    // console.log("Apple credential", credential);
-  } catch (e) {
-    if (e.code === "ERR_REQUEST_CANCELED") {
-      // handle that the user canceled the sign-in flow
-    } else {
-      // handle other errors
-    }
-  }
-};
-
 const handleAndroidSignIn = async () => {
   try {
     await GoogleSignin.hasPlayServices();
     const response = await GoogleSignin.signIn();
     if (isSuccessResponse(response)) {
-      // // console.log("Google response", response);
       if (response.data.idToken) {
         supabaseLogin("google", response.data.idToken);
       }
@@ -82,14 +59,6 @@ const handleAndroidSignIn = async () => {
 const RenderLoginButton = ({ os = "ios" }) => {
   if (os === "ios") {
     return <Button onPress={handleAndroidSignIn}>Login</Button>;
-    // return (
-    //   <AppleAuthentication.AppleAuthenticationButton
-    //     buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-    //     buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-    //     cornerRadius={5}
-    //     onPress={handleAppleSignIn}
-    //   />
-    // )
   } else if (os === "android") {
     return (
       <GoogleSigninButton

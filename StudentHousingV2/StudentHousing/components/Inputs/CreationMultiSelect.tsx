@@ -1,28 +1,70 @@
-// components/inputs/CreationMultiSelect.tsx
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ScrollView } from "react-native";
 import { CreationInputProps, Interest } from "@/typings";
 import { Button } from "tamagui";
+import { useProfile } from "@/providers/ProfileProvider";
+
+type Option = {
+  id: string;
+  label: string;
+};
 
 export const CreationMultiSelect = ({
   question,
   value,
   state,
+  isSelect,
 }: CreationInputProps) => {
+  const { globalInterests, getInterestName } = useProfile();
+  const [options, setOptions] = useState<Option[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (question.key === "interests") {
+      // Handle interests case
+      const interests = globalInterests.map((interest) => ({
+        id: interest,
+        label: getInterestName(interest),
+      }));
+      setOptions(interests);
+    } else if (question.options?.values) {
+      // Handle universal options case
+      const formattedOptions = question.options.values.map((option) => {
+        if (typeof option === "string") {
+          return { id: option, label: option };
+        }
+        return {
+          id: option.id,
+          label: option.label || option.interest || option.id,
+        };
+      });
+      setOptions(formattedOptions);
+    }
+  }, [question.key, question.options?.values, globalInterests]);
+
   const [inputState, setInputState] = state;
   const selectOption = useCallback(
-    (interest_id: string) => {
-      const newSelectedOptions = value.includes(interest_id)
-        ? value.filter((i: string) => i !== interest_id)
-        : [...value, interest_id];
+    (id: string) => {
+      let newSelectedOptions;
 
-      const newState = {
+      if (isSelect) {
+        // Single select behavior
+        newSelectedOptions = value.includes(id) ? [] : [id];
+      } else {
+        // Multi-select behavior
+        newSelectedOptions = value.includes(id)
+          ? value.filter((i: string) => i !== id)
+          : [...value, id];
+      }
+
+      setSelectedOptions(newSelectedOptions);
+      console.log(question.type);
+      setInputState({
         ...inputState,
         [question.type]: newSelectedOptions,
-      };
-      setInputState(newState);
+      });
     },
-    [value]
+    [value, isSelect, inputState, question.type, setInputState]
   );
 
   return (
@@ -33,16 +75,16 @@ export const CreationMultiSelect = ({
         gap: 8,
         maxHeight: 500,
       }}
-      showsVerticalScrollIndicator={true}
+      showsVerticalScrollIndicator={false}
       nestedScrollEnabled={true}
     >
-      {question.options?.values?.map((interest: Interest, index: number) => (
+      {options.map((option, index) => (
         <Button
-          key={index}
-          onPress={() => selectOption(interest.id)}
-          variant={value.includes(interest.id) ? undefined : "outlined"}
+          key={`${option.id}-${index}`}
+          onPress={() => selectOption(option.id)}
+          variant={selectedOptions.includes(option.id) ? undefined : "outlined"}
         >
-          {interest.interest}
+          {option.label}
         </Button>
       ))}
     </ScrollView>

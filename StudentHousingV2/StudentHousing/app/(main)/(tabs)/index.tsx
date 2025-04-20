@@ -1,4 +1,4 @@
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import ProfileCard from "@/components/ProfileCard";
 import SwipeHandler from "@/components/SwipeHandler";
 import { Profile, User } from "@/typings";
@@ -9,11 +9,13 @@ import { View } from "tamagui";
 import Loading from "@/components/Loading";
 import { useFocusEffect } from "expo-router";
 import { getSavedFilters } from "@/utils/filterUtils";
+import { useProfile } from "@/providers/ProfileProvider";
 
 export default function HomeScreen() {
   const auth = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
+  const { interests } = useProfile();
   const [isLoading, setIsLoading] = useState(true);
 
   const requestUpdate = async () => {
@@ -33,7 +35,7 @@ export default function HomeScreen() {
 
       const { response, error } = _response.data;
 
-      console.log("Fetched profiles:", response);
+      // console.log("Fetched profiles:", response);
 
       if (error) {
         console.error("Error fetching profiles:", error);
@@ -41,6 +43,7 @@ export default function HomeScreen() {
       }
 
       const parsedData = response.filter((profile) => profile);
+      // console.log("Parsed profiles:", parsedData);
       setProfiles(parsedData || []);
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -50,86 +53,8 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
+    // console.log("test");
     requestUpdate();
-
-    // (async () => {
-    //   const likeUser = async (targetId: string, sourceId: string) => {
-    //     if (targetId === sourceId) return;
-
-    //     const { data, error } = await supabase
-    //       .from("profile_interactions")
-    //       .select("type")
-    //       .eq("cohert2", sourceId)
-    //       .eq("cohert1", targetId)
-    //       .eq("type", "like")
-    //       .single();
-
-    //     if (!data) {
-    //       await supabase.from("profile_interactions").insert({
-    //         cohert1: sourceId,
-    //         cohert2: targetId,
-    //       });
-    //     } else {
-    //       const deleteInteractions = Promise.all([
-    //         supabase
-    //           .from("profile_interactions")
-    //           .delete()
-    //           .eq("cohert1", targetId)
-    //           .eq("cohert2", sourceId),
-    //         supabase
-    //           .from("profile_interactions")
-    //           .delete()
-    //           .eq("cohert1", sourceId)
-    //           .eq("cohert2", targetId),
-    //       ]);
-
-    //       const createConversation = supabase
-    //         .from("conversation_registry")
-    //         .insert({})
-    //         .select("conversation_id")
-    //         .single();
-
-    //       const [_, { data: conversationData, error: conversationError }] =
-    //         await Promise.all([deleteInteractions, createConversation]);
-
-    //       if (!conversationData) {
-    //         return console.error(
-    //           "Error creating conversation:",
-    //           conversationError
-    //         );
-    //       }
-
-    //       await Promise.all([
-    //         supabase.from("connections").insert({
-    //           cohert1: targetId,
-    //           cohert2: sourceId,
-    //           type: "flatmate",
-    //         }),
-    //         supabase.from("conversation_members").insert([
-    //           {
-    //             conversation_id: conversationData.conversation_id,
-    //             user_id: targetId,
-    //           },
-    //           {
-    //             conversation_id: conversationData.conversation_id,
-    //             user_id: sourceId,
-    //           },
-    //         ]),
-    //       ]);
-
-    //       return;
-    //     }
-    //   };
-
-    //   if (auth.session?.user.id) {
-    //     likeUser("0b64453c-d71d-441d-ad17-e96fe2fcb158", auth.session.user.id);
-    //     likeUser(auth.session.user.id, "0b64453c-d71d-441d-ad17-e96fe2fcb158");
-    //   } else {
-    //     console.error("User ID is undefined.");
-    //   }
-    // })();
-
-    // (async () => {
     //   const getUserDataQuery = `
     //     conversation_members!user_id(
     //       conversation_id,
@@ -194,9 +119,14 @@ export default function HomeScreen() {
     //     };
     //   });
 
-    //   console.log(parsedData);
+    //   // console.log(parsedData);
     // })();
   }, []);
+
+  useEffect(() => {
+    // console.log("Interests changed:", interests);
+    requestUpdate();
+  }, [interests]);
 
   const handleSwipeRight = async ({ index }: { index: number }) => {
     const target = profiles[index];
@@ -205,7 +135,6 @@ export default function HomeScreen() {
       return;
     }
 
-    console.log(target.id, auth.session?.user.id);
     try {
       const _response = await supabase.functions.invoke(
         "sendProfileInteraction",
@@ -220,8 +149,8 @@ export default function HomeScreen() {
 
       const { status, response } = _response.data;
 
-      if (status === "success") console.log("Interaction sent successfully.");
-      else console.error("Error sending interaction:", status, response);
+      // if (status === "success") // console.log("Interaction sent successfully.");
+      // else console.error("Error sending interaction:", status, response);
     } catch (error) {
       console.error("Error sending interaction:", error);
     }
@@ -252,8 +181,8 @@ export default function HomeScreen() {
         }
       );
 
-      if (status === "success") console.log("Interaction sent successfully.");
-      else console.error("Error sending interaction:", status);
+      // if (status === "success") // console.log("Interaction sent successfully.");
+      // else console.error("Error sending interaction:", status);
     } catch (error) {
       console.error("Error sending interaction:", error);
     }
@@ -277,7 +206,7 @@ export default function HomeScreen() {
             }
         )}
         Card={ProfileCard}
-        style={{ marginTop: 16, margin: 16 }}
+        style={{ marginTop: 16 }}
       />
     </View>
   );

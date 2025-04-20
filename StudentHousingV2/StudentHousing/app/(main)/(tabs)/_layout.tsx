@@ -24,6 +24,7 @@ import { usePathname, useRouteInfo } from "expo-router/build/hooks";
 import { Compass, Mail, MessageCircle, User } from "@tamagui/lucide-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRoute } from "@react-navigation/native";
+import { useViewMode } from "@/providers/ViewModeProvider";
 
 export default function TabLayout() {
   const theme = useTheme();
@@ -31,26 +32,17 @@ export default function TabLayout() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [landlordMode, setLandlordMode] = useState(false);
-
-  const landlordModeStorage = async () => {
-    const mode = await AsyncStorage.getItem("landlordMode");
-    const parsedMode = mode == "true";
-
-    if (parsedMode === landlordMode) return;
-
-    setLandlordMode(parsedMode);
-    // if landlord mode is true and we are on discovery page redirect to requests
-    // if landlord mode is false and we are on requests page redirect to discovery
-    if (parsedMode && pathname.includes("/"))
-      return router.replace("/(main)/(tabs)/requests");
-    if (!parsedMode && pathname.includes("/requests"))
-      return router.replace("/(main)/(tabs)");
-  };
+  const { viewMode, setViewMode } = useViewMode();
 
   useEffect(() => {
-    landlordModeStorage();
-  });
+    console.log(viewMode);
+    // if landlord mode is true and we are on discovery page redirect to requests
+    // if landlord mode is false and we are on requests page redirect to discovery
+    // if (viewMode === "landlord" && pathname.includes("/"))
+    //   return router.replace("/(main)/(tabs)/requests");
+    // if (viewMode === "flatmate" && pathname.includes("/requests"))
+    //   return router.replace("/(main)/(tabs)");
+  }, [viewMode]);
 
   const insets = useSafeAreaInsets();
 
@@ -89,7 +81,7 @@ export default function TabLayout() {
         options={{
           title: "Discover",
           tabBarIcon: ({ color }) => <Compass color={color} />,
-          href: !landlordMode ? undefined : null,
+          href: viewMode === "flatmate" ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -97,7 +89,7 @@ export default function TabLayout() {
         options={{
           title: "Requests",
           tabBarIcon: ({ color }) => <Mail color={color} />,
-          href: landlordMode ? undefined : null, // Disable the tab if not in landlord mode
+          href: viewMode === "landlord" ? undefined : null,
         }}
       />
       <Tabs.Screen

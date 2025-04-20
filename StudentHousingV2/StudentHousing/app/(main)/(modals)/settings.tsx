@@ -10,30 +10,26 @@ import {
 
 import { Check as CheckIcon } from "@tamagui/lucide-icons";
 import { router, useNavigation } from "expo-router";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import supabase from "@/lib/supabase";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { Header } from "@react-navigation/elements/src/Header/Header";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useViewMode } from "@/providers/ViewModeProvider";
 
 const SettingsPage = () => {
-  const [landlordMode, setLandlordMode] = useState(false);
-  useEffect(() => {
-    (async () => {
-      const _landlordMode = await AsyncStorage.getItem("landlordMode");
-      setLandlordMode(_landlordMode === "true");
-    })();
-  }, [landlordMode]);
+  const { viewMode, setViewMode } = useViewMode();
+
+  const [viewModeBool, setViewModeBool] = useState(viewMode === "landlord");
 
   const onPress = async () => {
-    const mode = !landlordMode;
-    await AsyncStorage.setItem("landlordMode", `${mode}`);
-    setLandlordMode(mode);
+    setViewModeBool(!viewModeBool);
+    setViewMode(!viewModeBool ? "landlord" : "flatmate");
   };
 
   const checkbox = (itemLabel: string) => {
     return (
-      <Checkbox onPress={onPress} defaultChecked={landlordMode} size="$4">
+      <Checkbox onPress={onPress} defaultChecked={viewModeBool} size="$4">
         <Checkbox.Indicator>
           <CheckIcon />
         </Checkbox.Indicator>
@@ -51,7 +47,7 @@ const SettingsPage = () => {
               <Button
                 pressTheme
                 onPress={() => {
-                  console.log("Pressed");
+                  // console.log("Pressed");
                   router.replace("/(auth)/creation");
                 }}
               >

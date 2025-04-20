@@ -3,11 +3,16 @@ import { CreationText } from "./CreationText";
 import { CreationMultiSelect } from "./CreationMultiSelect";
 import { CreationSlider } from "./CreationSlider";
 import { CreationDate } from "./CreationDate";
-import MediaUpload, { deleteImage, uploadImage } from "../MediaUpload";
-import { Question, ImageObject } from "@/typings";
-import { useAuth } from "../AuthProvider";
+import MediaUpload, {
+  deleteImage,
+  ImageObject,
+  uploadImage,
+} from "../MediaUpload";
+import { useAuth } from "@/providers/AuthProvider";
 import supabase from "@/lib/supabase";
 import { View } from "tamagui";
+import { Question } from "@/app/(auth)/creation";
+import { LocationPicker } from "../LocationPicker";
 
 interface CreationInputFactoryProps {
   question: Question;
@@ -82,6 +87,15 @@ export const CreationInputFactory = ({
           state={state}
         />
       );
+    case "select":
+      return (
+        <CreationMultiSelect
+          question={question}
+          value={inputState.multiSelect}
+          state={state}
+          isSelect={true}
+        />
+      );
 
     case "slider":
       return (
@@ -111,8 +125,20 @@ export const CreationInputFactory = ({
           onDelete={(image) => {
             deleteImage(session, image);
           }}
-          question={question}
           images={inputState.media as ImageObject[]}
+        />
+      );
+    case "location":
+      return (
+        <LocationPicker
+          showSaveButton={false}
+          onLocationChange={(location) => {
+            const [inputState, setInputState] = state;
+            setInputState({
+              ...inputState,
+              location: location,
+            });
+          }}
         />
       );
     default:

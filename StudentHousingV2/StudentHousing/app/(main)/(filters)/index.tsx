@@ -1,13 +1,22 @@
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useEffect, useState, useCallback } from "react";
-import { ChevronRight, List } from "@tamagui/lucide-icons";
-import { YGroup, ListItem, ScrollView, View, Button, Switch } from "tamagui";
+import { ChevronRight } from "@tamagui/lucide-icons";
+import {
+  YGroup,
+  ListItem,
+  ScrollView,
+  View,
+  Button,
+  Text,
+  XStack,
+} from "tamagui";
 import { Header } from "@react-navigation/elements/src/Header/Header";
 import supabase from "@/lib/supabase";
 import { useFocusEffect } from "@react-navigation/native";
 import { Text as HeaderText } from "@react-navigation/elements/src/Text";
 import { getSavedFilters } from "@/utils/filterUtils";
-import ToggleFilter from "./toggle";
+import * as Location from "expo-location";
+import { useSearchMode } from "@/providers/ViewModeProvider";
 
 interface Filter {
   id: string;
@@ -20,17 +29,18 @@ interface Filter {
   label: string;
   filter_key: string;
   filter_table: string;
-  filter_registry: {
-    type: string;
-  };
+  view_type: string;
+  type: string;
 }
 
 export const HeaderWithText = ({
   page = "Filters",
   title = "Done",
+  onPress,
 }: {
   page: string;
   title: string;
+  onPress?: () => void;
 }) => {
   return (
     <Header
@@ -41,6 +51,7 @@ export const HeaderWithText = ({
           <HeaderText
             onPress={() => {
               router.back();
+              onPress && onPress();
             }}
           >
             {title}
@@ -49,6 +60,29 @@ export const HeaderWithText = ({
       }}
     />
   );
+};
+
+export const getCityFromCoordinates = async (
+  latitude: number,
+  longitude: number
+) => {
+  try {
+    const geocode = await Location.reverseGeocodeAsync({
+      latitude,
+      longitude,
+    });
+
+    if (geocode.length > 0) {
+      const { city, district, subregion, region, country } = geocode[0];
+      return (
+        city || district || subregion || region || country || "Unknown location"
+      );
+    }
+    return "Unknown location";
+  } catch (error) {
+    console.error("Error getting location name:", error);
+    return "Unknown location";
+  }
 };
 
 export const HeaderWithBack = ({ page = "Filters" }) => {
@@ -63,65 +97,70 @@ const FilterScreen = () => {
   );
   const [formattedFilterData, setFormattedFilterData] = useState<Filter[]>([]);
 
+  // Use the search mode context
+  const { searchMode, setSearchMode } = useSearchMode();
+
   const { filtersToSave } = useLocalSearchParams();
 
-  const fetchFilters = async () => {
-    const { data, error } = await supabase.from("filters").select(
-      `
-        *,
-        filter_registry (type)
-      `
-    );
+  const fetchFilters = async (viewType: string) => {
+    const { data, error } = await supabase
+      .from("filters")
+      .select("*")
+      .in("view_type", [viewType, "shared"]);
 
     if (error) {
       console.error("Error fetching filters:", error);
       return [];
     }
-    return (data ?? []) as Filter[];
+
+    return data as Filter[];
   };
 
   const formatFilterDescriptions = useCallback(
-    (filters: Filter[], savedData: Record<string, any>) => {
-      return filters.map((filter: Filter) => {
-        let description = "";
+    async (filters: Filter[], savedData: Record<string, any>) => {
+      return Promise.all(
+        filters.map(async (filter: Filter) => {
+          let description = "";
+          if (savedData[filter.filter_key] !== undefined) {
+            if (filter.type === "multiSelect") {
+              const values = Object.entries(savedData[filter.filter_key]);
+              description = values
+                .filter(([_, value]) => value)
+                .map(([key]) => key)
+                .join(", ");
+            } else if (filter.type === "slider") {
+              const values = savedData[filter.filter_key];
+              description = values.join(" - ");
+            } else if (filter.type === "toggle") {
+              const value = savedData[filter.filter_key];
+              const { data } = filter.options;
+              description = value ? data[0] : data[1];
+            } else if (filter.type === "location") {
+              const value = savedData[filter.filter_key];
+              const label = await getCityFromCoordinates(
+                value.latitude,
+                value.longitude
+              );
 
-        if (savedData[filter.filter_key] !== undefined) {
-          if (filter.filter_registry.type === "multiSelect") {
-            const values = Object.entries(savedData[filter.filter_key]);
-            description = values
-              .filter(([_, value]) => value)
-              .map(([key]) => key)
-              .join(", ");
-          } else if (filter.filter_registry.type === "slider") {
-            const values = savedData[filter.filter_key];
-            description = values.join(" - ");
-          } else if (filter.filter_registry.type === "toggle") {
-            const value = savedData[filter.filter_key];
-            const { data } = filter.options;
-            description = value ? data[0] : data[1];
-          } else if (filter.filter_registry.type === "location") {
-            const value = savedData[filter.filter_key];
-            console.log("Location value", value);
-            // description = `${value.latitude}, ${value.longitude}`;
-          } else {
-            description = String(savedData[filter.filter_key]);
+              description = `${label} (${value.range / 1000} km)`;
+            }
           }
-        }
 
-        return {
-          ...filter,
-          description,
-        };
-      });
+          return {
+            ...filter,
+            description,
+          };
+        })
+      );
     },
     []
   );
 
-  // Refresh all data
+  // Refresh data when search mode changes - this will load the appropriate filters
   const refreshData = useCallback(async () => {
-    setSavedFilterData(await getSavedFilters());
-    setFilterData(await fetchFilters());
-  }, []);
+    setSavedFilterData(await getSavedFilters()); // This now uses the search mode-specific storage key
+    setFilterData(await fetchFilters(searchMode));
+  }, [searchMode]);
 
   useEffect(() => {
     refreshData();
@@ -130,20 +169,30 @@ const FilterScreen = () => {
   useFocusEffect(
     useCallback(() => {
       refreshData();
-      return () => {}; // cleanup function
+      return () => {};
     }, [refreshData])
   );
 
   useEffect(() => {
-    if (filterData.length > 0) {
-      setFormattedFilterData(
-        formatFilterDescriptions(filterData, savedFilterData)
-      );
-    }
+    const formatData = async () => {
+      if (filterData.length > 0) {
+        const formattedData = await formatFilterDescriptions(
+          filterData,
+          savedFilterData
+        );
+        setFormattedFilterData(formattedData);
+      }
+    };
+    formatData();
   }, [filterData, savedFilterData, formatFilterDescriptions]);
 
+  const handleSearchTypeChange = (type: "accommodation" | "flatmate") => {
+    setSearchMode(type);
+    // Filters will be automatically refreshed due to the dependency in refreshData
+  };
+
   const RenderFilterItem = (item: Filter) => {
-    switch (item.filter_registry.type) {
+    switch (item.type) {
       case "multiSelect":
         return (
           <ListItem
@@ -181,8 +230,7 @@ const FilterScreen = () => {
             iconAfter={ChevronRight}
           />
         );
-      case "toggle":
-        return <ToggleFilter item={item} />;
+
       case "location":
         return (
           <ListItem
@@ -204,11 +252,34 @@ const FilterScreen = () => {
         return <></>;
     }
   };
+
   return (
     <>
       <HeaderWithText page={"Filters"} title={"Done"} />
       <ScrollView flex={1} bg={"$background"}>
-        <View paddingBlock={"$4"} paddingInline={"$4"}>
+        <View paddingHorizontal="$4" paddingTop="$4">
+          <Text size="$5" fontWeight="bold" marginBottom="$2">
+            Search Type
+          </Text>
+          <XStack gap="$2" marginBottom="$4">
+            <Button
+              flex={1}
+              variant={searchMode === "accommodation" ? "filled" : "outlined"}
+              onPress={() => handleSearchTypeChange("accommodation")}
+            >
+              Accommodation
+            </Button>
+            <Button
+              flex={1}
+              variant={searchMode === "flatmate" ? "filled" : "outlined"}
+              onPress={() => handleSearchTypeChange("flatmate")}
+            >
+              Flatmate
+            </Button>
+          </XStack>
+        </View>
+
+        <View paddingBlock={"$2"} paddingInline={"$4"}>
           <YGroup rowGap={"$0.5"}>
             {formattedFilterData.map((filter, index) => (
               <YGroup.Item key={index}>{RenderFilterItem(filter)}</YGroup.Item>

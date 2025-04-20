@@ -11,7 +11,7 @@ import { Input, View, Text, useTheme, Button, ScrollView } from "tamagui";
 
 import { useLocalSearchParams } from "expo-router";
 import { User, TextMessageProps, Profile } from "@/typings";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import supabase from "@/lib/supabase";
 
 import {

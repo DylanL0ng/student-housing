@@ -11,7 +11,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.C21331063.StudentHousing",
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "config": {
+        "googleMapsApiKey":  "process.env.EXPO_PUBLIC_GOOGLE_IOS_MAP_API_KEY"
+      }
     },
     "android": {
       "adaptiveIcon": {

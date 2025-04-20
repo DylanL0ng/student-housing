@@ -3,7 +3,13 @@ import { getSavedFilters, saveFilter } from "@/utils/filterUtils";
 import { useEffect, useState } from "react";
 import { ListItem, Switch } from "tamagui";
 
-const ToggleFilter = ({ item }: { item: Filter }) => {
+const ToggleFilter = ({
+  item,
+  onToggle,
+}: {
+  item: Filter;
+  onToggle: (toggle: boolean) => void;
+}) => {
   const [isToggled, setIsToggled] = useState(false);
 
   const handleToggle = () => {
@@ -11,6 +17,7 @@ const ToggleFilter = ({ item }: { item: Filter }) => {
     setIsToggled(value);
 
     saveFilter(item.filter_key, value);
+    onToggle(value);
   };
 
   useEffect(() => {

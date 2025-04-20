@@ -6,26 +6,11 @@ import { Profile } from "@/typings";
 
 import { View } from "tamagui";
 import { router } from "expo-router";
-
-const calculateAge = (timestamptz: string) => {
-  const birthDate = new Date(timestamptz);
-  const today = new Date();
-
-  let age = today.getFullYear() - birthDate.getFullYear();
-
-  const isBeforeBirthdayThisYear =
-    today.getMonth() < birthDate.getMonth() ||
-    (today.getMonth() === birthDate.getMonth() &&
-      today.getDate() < birthDate.getDate());
-
-  if (isBeforeBirthdayThisYear) {
-    age--;
-  }
-
-  return age;
-};
+import { useProfile } from "@/providers/ProfileProvider";
 
 const ProfileCard = ({ profile }: { profile: Profile }) => {
+  // console.log("ProfileCard", profile);
+  const { getInterestName } = useProfile();
   return (
     <View style={styles.body}>
       <View style={styles.float}>
@@ -80,7 +65,9 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
               borderColor={"$yellow5"}
               style={styles.personalInfoInterestsWrapper}
             >
-              <Text style={styles.personalInfoInterestsText}>{interest}</Text>
+              <Text style={styles.personalInfoInterestsText}>
+                {getInterestName(interest)}
+              </Text>
             </View>
           ))}
         </View>

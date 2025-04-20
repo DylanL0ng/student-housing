@@ -13,8 +13,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { userId, minimal, source } = await req.json();
-    const userDataResult = await getUserData([userId], { minimal, source });
+    const { userId, minimal, mode } = await req.json();
+    const userDataResult = await getUserData([userId], { minimal, mode });
 
     return new Response(JSON.stringify(userDataResult), {
       headers: {

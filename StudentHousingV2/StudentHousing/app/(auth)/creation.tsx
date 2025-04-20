@@ -4,17 +4,67 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
 import supabase from "@/lib/supabase";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import { uploadImage } from "@/components/MediaUpload";
 import { Question, Answer, Interest, ImageObject } from "@/typings";
 import { CreationInputFactory } from "@/components/Inputs/Creation";
 import { Button, Progress, Text, useTheme, View } from "tamagui";
+import Loading from "@/components/Loading";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
+export interface Question {
+  title: string;
+  description: string;
+  type:
+    | "text"
+    | "multiSelect"
+    | "slider"
+    | "date"
+    | "media"
+    | "location"
+    | "select";
+  key: string;
+  options?:
+    | InputOptions
+    | DateOptions
+    | SliderOptions
+    | MediaOptions
+    | MultiSelectOptions;
+  skipable?: boolean;
+}
+
+export interface Answer {
+  value: any;
+  skipped: boolean;
+}
+
+export interface SliderOptions {
+  range: [number, number, number]; // [min, max, step]
+  value: number;
+}
+
+export interface MediaOptions {
+  bucket: string;
+}
+
+export interface InputOptions {
+  placeholder: string;
+}
+
+export interface DateOptions {}
+
+export interface MultiSelectOptions {
+  values: any[];
+}
+
+export interface ImageObject {
+  uri: string;
+  order: number;
+}
+
 const CreateScreen = () => {
   const { session } = useAuth();
-  const [interests, setInterests] = useState<Interest[]>([]);
   const theme = useTheme();
 
   const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
@@ -28,96 +78,53 @@ const CreateScreen = () => {
     slider: 0,
     date: new Date(),
     media: [],
+    location: [],
+    select: null,
   });
 
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("interest_registry")
-      .select()
-      .then(({ data, error }) => {
-        if (error) console.error(error);
-        if (data) setInterests(data);
-      });
+    (async () => {
+      const { data, error } = await supabase
+        .from("profile_information_registry")
+        .select("creation, priority_order, input_type, type");
+
+      if (error) {
+        console.error("Error fetching data:", error);
+        setLoading(false);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        console.log("No data returned from query");
+        setLoading(false);
+        return;
+      }
+
+      const filteredData = data.filter((item) => item && item.creation);
+
+      const sortedData = filteredData.sort(
+        (a, b) => b.priority_order - a.priority_order
+      );
+
+      const parsedData = sortedData.map((item) => ({
+        title: item.creation.title,
+        description: item.creation.description,
+        type: item.input_type,
+        key: item.type,
+        options: item.creation.options,
+        skipable: item.creation.skipable || false,
+      }));
+
+      setQuestions(parsedData);
+      setLoading(false);
+    })();
   }, []);
 
-  const questions = useCallback(
-    () => [
-      {
-        title: "My name is...",
-        description: "This is how people will know you",
-        type: "text" as const,
-        options: { placeholder: "Your name" },
-        db: { table: "profiles", column: "full_name", identifier: "id" },
-        key: "name",
-        skipable: false,
-      },
-      {
-        title: "My favourite thing to do is...",
-        description: "",
-        type: "text" as const,
-        options: { placeholder: "Your favourite thing to do" },
-        db: {
-          table: "profiles",
-          column: "favorite_activity",
-          identifier: "id",
-        },
-        key: "activity",
-        skipable: false,
-      },
-      {
-        title: "My age is...",
-        description: "When were you born",
-        type: "date" as const,
-        options: {},
-        db: { table: "profiles", column: "date_of_birth", identifier: "id" },
-        key: "dob",
-        skipable: false,
-      },
-      {
-        title: "I am interested in...",
-        description: "Select your interests",
-        type: "multiSelect" as const,
-        key: "interests",
-        options: { values: interests },
-        db: {
-          table: "profile_interests",
-          column: "interest_id",
-          identifier: "user_id",
-        },
-        skipable: true,
-      },
-      {
-        title: "My budget is...",
-        description: "Set your monthly budget",
-        type: "slider" as const,
-        key: "budget",
-        options: {
-          range: [0, 2000, 1],
-          value: 0,
-        },
-        db: {
-          table: "profiles",
-          column: "budget",
-          identifier: "id",
-        },
-        skipable: true,
-      },
-      {
-        title: "Photos...",
-        description: "Upload your profile photos",
-        type: "media" as const,
-        key: "profile-images",
-        options: { bucket: "profile-images" },
-        skipable: false,
-      },
-    ],
-    [interests]
-  );
-
-  const questionList = questions();
-  const currentQuestion = questionList[questionIndex];
+  const currentQuestion = questions[questionIndex];
 
   const resetInputState = useCallback((type: string) => {
     switch (type) {
@@ -136,6 +143,12 @@ const CreateScreen = () => {
       case "media":
         setInputState((prev) => ({ ...prev, media: [] }));
         break;
+      case "location":
+        setInputState((prev) => ({ ...prev, location: [] }));
+        break;
+      case "select":
+        setInputState((prev) => ({ ...prev, select: null }));
+        break;
     }
   }, []);
 
@@ -145,6 +158,8 @@ const CreateScreen = () => {
         return value?.length > 0;
       case "multiSelect":
         return value?.length > 0;
+      case "select":
+        return value;
       case "slider":
         return value >= 0;
       case "date":
@@ -155,13 +170,17 @@ const CreateScreen = () => {
         return age >= 18;
       case "media":
         return value?.length > 0;
+      case "location":
+        return value?.latitude && value?.longitude;
       default:
         return false;
     }
   };
 
   useEffect(() => {
-    const value = inputState[currentQuestion.type];
+    if (!currentQuestion) return;
+    const type = currentQuestion.type as keyof typeof inputState;
+    const value = inputState[type];
     setContinueDisabled(!validateInput(currentQuestion.type, value));
   }, [questionIndex, inputState, currentQuestion]);
 
@@ -178,13 +197,34 @@ const CreateScreen = () => {
   const backButtonPressed = () => setQuestionIndex((prev) => prev - 1);
 
   const cancelButtonPressed = () => {
-    supabase.auth.signOut();
-    router.replace("/login");
+    router.dismiss();
   };
 
-  const continueButtonPressed = () => {
+  const processAnswer = (key: string, value: any) => {
+    switch (key) {
+      case "biography":
+        return {
+          data: value,
+          label: "Your bio",
+          placeholder: "Enter your bio",
+        };
+      case "name":
+        return {
+          data: value,
+          label: "Edit your name",
+          placeholder: "Your name",
+        };
+      default:
+        return {
+          data: value,
+        };
+    }
+  };
+
+  const continueButtonPressed = async () => {
     if (!currentQuestion) return;
     if (continueDisabled) return;
+    if (!session) return;
 
     let value;
 
@@ -195,6 +235,9 @@ const CreateScreen = () => {
       case "multiSelect":
         value = inputState.multiSelect;
         break;
+      case "select":
+        value = inputState.select;
+        break;
       case "slider":
         value = inputState.slider;
         break;
@@ -203,6 +246,9 @@ const CreateScreen = () => {
         break;
       case "media":
         value = inputState.media;
+        break;
+      case "location":
+        value = inputState.location;
         break;
       default:
         console.warn("Unknown input type");
@@ -220,21 +266,71 @@ const CreateScreen = () => {
       return;
     }
 
-    setAnswers((prev) => ({ ...prev, [currentQuestion.key]: value }));
+    const newAnswers = {
+      ...answers,
+      [currentQuestion.key]: {
+        value,
+      },
+    };
+
+    setAnswers(newAnswers);
     resetInputState(currentQuestion.type);
 
-    if (questionIndex + 1 >= questionList.length) {
-      console.log("Submitting data", answers);
+    if (questionIndex + 1 >= questions.length) {
+      setLoading(true);
+      const parsedAnswers = Object.entries(newAnswers).filter(
+        ([key, value]) => {
+          if (key === "media") return;
+          if (key === "location") return;
+          if (key === "interests") return;
+
+          return value !== undefined;
+        }
+      );
+      const { data, error } = await supabase.from("profile_information").upsert(
+        parsedAnswers.map(([key, value]) => {
+          return {
+            profile_id: session.user.id,
+            value: processAnswer(key, value),
+            key,
+            view: "flatmate",
+          };
+        })
+      );
+
+      if (error) {
+        console.error("Error saving data:", error);
+        return;
+      }
+
+      const { error: createdError } = await supabase
+        .from("profiles")
+        .update({
+          created: true,
+        })
+        .eq("id", session.user.id);
+
+      if (createdError) {
+        console.error("Error updating created status:", createdError);
+        return;
+      }
+
+      setLoading(false);
       router.replace("/(main)/(tabs)");
     } else {
       setQuestionIndex((prev) => prev + 1);
     }
   };
 
+  if (loading) return <Loading title="Loading" />;
+
+  if (!questions || questions.length === 0)
+    return <Loading title="No questions found" />;
+
   return (
     <View bg="$background" style={{ flex: 1 }}>
       <View style={{ width: "100%", backgroundColor: "black" }}>
-        <Progress value={(questionIndex / questionList.length) * 100}>
+        <Progress value={(questionIndex / questions.length) * 100}>
           <Progress.Indicator animation={"superBouncy"} />
         </Progress>
       </View>
@@ -246,13 +342,13 @@ const CreateScreen = () => {
           <Text>Saving your profile...</Text>
         </View>
       ) : (
-        <View style={{ flex: 1, padding: 24, paddingBottom: 0 }}>
+        <View paddingInline={"$2"} flex={1}>
           <View style={{ flex: 1 }}>
             <View
               style={{
                 flexDirection: "row",
                 justifyContent: "space-between",
-                marginBottom: 16,
+                marginBlock: 16,
               }}
             >
               {questionIndex > 0 ? (
@@ -292,8 +388,7 @@ const CreateScreen = () => {
             <Animated.View
               style={{
                 alignItems: "flex-start",
-                gap: 16,
-                marginBottom: 16,
+                width: "100%",
                 transform: [{ translateX: slideAnim }],
               }}
             >
@@ -307,7 +402,10 @@ const CreateScreen = () => {
                 >
                   {currentQuestion.title}
                 </Text>
-                <Text style={{ color: theme.color11.val, fontSize: 14 }}>
+                <Text
+                  marginBlockEnd={"$4"}
+                  style={{ color: theme.color11.val, fontSize: 14 }}
+                >
                   {currentQuestion.description}
                 </Text>
               </View>

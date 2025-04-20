@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import React, { useEffect } from "react";
 import supabase from "@/lib/supabase";
-import { AuthProvider, useAuth } from "@/components/AuthProvider";
+import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import generateFakeUsers from "@/scripts/generateFakeUsers";
 
 const Routing = () => {
@@ -13,11 +13,11 @@ const Routing = () => {
 
   useEffect(() => {
     if (!loading) {
-      if (session) {
-        router.replace("/(main)/(tabs)");
-      } else {
-        router.replace("/(auth)/login");
-      }
+      router.replace("/(auth)/login");
+      // if (session) {
+      // router.replace("/(main)/(tabs)");
+      // } else {
+      // }
     }
   }, [session, loading]);
 

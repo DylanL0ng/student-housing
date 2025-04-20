@@ -109,7 +109,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
   }, []);
 
   const handleImageDeleteAccept = useCallback(async () => {
-    console.log("Deleting image:", imageToDelete);
+    // console.log("Deleting image:", imageToDelete);
     if (!imageToDelete) return;
 
     setImages((prev) =>
@@ -134,13 +134,15 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
       const image = imageMap.get(idx);
 
       return (
-        <TouchableOpacity
+        <View
+          key={`image-${idx}`}
+          bg={"$backgroundHover"}
+          borderWidth={"$0.5"}
+          borderColor={image ? "$color" : "$color02"}
+          borderStyle={image ? "solid" : "dashed"}
           style={{
             ...styles.cell,
-            backgroundColor: theme.color02.val,
           }}
-          activeOpacity={0.9}
-          key={`${idx}`}
           onPress={() => handleImagePick(idx)}
         >
           {image ? (
@@ -155,21 +157,23 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
               <Button
                 elevate
                 elevation={3}
+                top={4}
+                left={4}
                 circular
                 size="$2"
                 theme="accent"
-                onPress={() => handleDeleteImage(image)} // Trigger delete
+                onPress={() => handleDeleteImage(image)}
                 bordered
               >
-                <MaterialIcons name="close" size={24} color="black" />
+                <MaterialIcons name="close" size={18} color="black" />
               </Button>
             </>
           ) : (
-            <Button circular size="$2" theme="accent">
-              <MaterialIcons name="add" size={24} color="black" />
+            <Button circular top={4} left={4} size="$2" theme="accent">
+              <MaterialIcons name="add" size={18} color="black" />
             </Button>
           )}
-        </TouchableOpacity>
+        </View>
       );
     });
   }, [images, handleImagePick]);
@@ -244,7 +248,7 @@ const styles = StyleSheet.create({
   },
   cell: {
     overflow: "hidden",
-    width: "32%",
+    width: "32.81%",
     height: 165,
     borderRadius: 8,
     margin: 1,

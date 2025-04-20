@@ -5,10 +5,11 @@ import React, { useCallback, useEffect, useState, useRef } from "react";
 import { FlatList, SafeAreaView } from "react-native";
 
 import supabase from "@/lib/supabase";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import Loading from "@/components/Loading";
 
 import { H6, View } from "tamagui";
+import { useViewMode } from "@/providers/ViewModeProvider";
 
 // Component to render section headers
 const SectionHeader = ({ title }) => {
@@ -63,12 +64,13 @@ export default function MessagesScreen() {
     string[]
   >([]);
 
+  const { viewMode } = useViewMode();
+
   // Use a ref to keep track of conversation mapping for message updates
   const conversationMappingRef = useRef<Record<string, Profile>>({});
   // Use a ref to store the current message channel subscription
   const messageChannelRef = useRef<any>(null);
 
-  // If no session, return empty fragment
   if (!session) return <></>;
 
   // Function to update message subscription when conversation list changes
@@ -170,10 +172,10 @@ export default function MessagesScreen() {
               }
 
               // If we get here, it's a message for a conversation we don't know about yet
-              console.log(
-                "Received message for unknown conversation:",
-                conversationId
-              );
+              // console.log(
+              //   "Received message for unknown conversation:",
+              //   conversationId
+              // );
               return prev;
             });
           }
@@ -195,6 +197,7 @@ export default function MessagesScreen() {
         {
           body: {
             userId: session.user.id,
+            mode: viewMode,
           },
         }
       );
@@ -238,7 +241,7 @@ export default function MessagesScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [session]);
+  }, [session, viewMode]);
 
   // Set up realtime subscription for new conversations
   const setupMembershipSubscription = useCallback(() => {
@@ -258,11 +261,13 @@ export default function MessagesScreen() {
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
+          // console.log("Received payload:", payload);
           if (payload.eventType === "INSERT") {
             const { conversation_id } = payload.new;
 
             // Only process if we're not already subscribed
             if (!subscribedConversations.includes(conversation_id)) {
+              // console.log("Subscribing to new conversation:", conversation_id);
               // Add to subscribed conversations immediately
               setSubscribedConversations((prev) => [...prev, conversation_id]);
 
@@ -276,17 +281,20 @@ export default function MessagesScreen() {
 
               const otherUserId = data?.user_id;
 
+              // console.log("Other user ID:", otherUserId);
               // Get profile data
               const { data: profileData } = await supabase.functions.invoke(
                 "getProfile",
                 {
                   body: {
                     userId: otherUserId,
-                    source: userId,
+                    sourceId: userId,
                     minimal: true,
                   },
                 }
               );
+
+              // console.log("Profile data:", profileData);
 
               if (profileData && profileData.length > 0) {
                 const newConnection = profileData[0] as Profile;
@@ -298,6 +306,7 @@ export default function MessagesScreen() {
                 if (newConnection.conversations[0].latest_message) {
                   setConversationHistory((prev) => [newConnection, ...prev]);
                 } else {
+                  // console.log("adding to uninteracted matches");
                   setUnInteractedMatches((prev) => [newConnection, ...prev]);
                 }
               }
@@ -340,8 +349,9 @@ export default function MessagesScreen() {
 
   // Fetch connections on component mount
   useEffect(() => {
+    console.log("Fetching connections...");
     fetchConnections();
-  }, [fetchConnections]);
+  }, [fetchConnections, viewMode]);
 
   // Set up membership subscription
   useEffect(() => {

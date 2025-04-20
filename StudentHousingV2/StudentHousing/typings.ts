@@ -100,58 +100,7 @@ export interface CreationInputProps {
   value: any;
 }
 
-// types.ts
 export interface Interest {
   id: string;
   interest: string;
-}
-
-export interface Answer {
-  value: any;
-  skipped: boolean;
-}
-
-export interface SliderOptions {
-  range: [number, number, number]; // [min, max, step]
-  value: number;
-}
-
-export interface MediaOptions {
-  bucket: string;
-}
-
-export interface DatabaseOptions {
-  table: string;
-  column: string;
-  identifier: string;
-}
-
-export interface InputOptions {
-  placeholder: string;
-}
-
-export interface DateOptions {}
-
-export interface MultiSelectOptions {
-  values: any[];
-}
-
-export interface Question {
-  title: string;
-  description: string;
-  type: "text" | "multiSelect" | "slider" | "date" | "media";
-  key: string;
-  db?: DatabaseOptions;
-  options?:
-    | InputOptions
-    | DateOptions
-    | SliderOptions
-    | MediaOptions
-    | MultiSelectOptions;
-  skipable?: boolean;
-}
-
-export interface ImageObject {
-  uri: string;
-  order: number;
 }

@@ -66,8 +66,8 @@ async function getInterestRegistry(supabase): Promise<Map<string, string>> {
     registryData.map((interest) => [interest.id, interest.interest])
   );
 
-  // console.log("Interest registry loaded:");
-  // console.log(GLOBAL_INTEREST_REGISTRY);
+  // // console.log("Interest registry loaded:");
+  // // console.log(GLOBAL_INTEREST_REGISTRY);
 
   return GLOBAL_INTEREST_REGISTRY;
 }
@@ -124,8 +124,8 @@ async function fetchAllUserProfiles(
     })
   );
 
-  // console.log("Media results:");
-  // console.log(mediaResults);
+  // // console.log("Media results:");
+  // // console.log(mediaResults);
   // Construct user profiles
   const userProfiles = profilesData.map((profileData) => {
     // Process interests - map interest IDs to labels using the registry
@@ -133,13 +133,13 @@ async function fetchAllUserProfiles(
       .filter((i) => i.user_id === profileData.id)
       .map((i) => interestRegistry.get(i.interest_id) || "");
     // .filter((label) => label !== "");
-    // console.log("Interests for user", profileData.id, interests);
+    // // console.log("Interests for user", profileData.id, interests);
 
     // Find media URLs for this user
     const mediaUrls =
       mediaResults.find((m) => m.id === profileData.id)?.urls || [];
 
-    // console.log("Media for user", profileData.id, mediaUrls);
+    // // console.log("Media for user", profileData.id, mediaUrls);
     return {
       id: profileData.id,
       name: profileData.full_name,
@@ -156,8 +156,8 @@ async function fetchAllUserProfiles(
     };
   });
 
-  // console.log("User profiles:");
-  // console.log(userProfiles);
+  // // console.log("User profiles:");
+  // // console.log(userProfiles);
   return userProfiles;
 }
 

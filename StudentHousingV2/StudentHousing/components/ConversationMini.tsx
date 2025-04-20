@@ -6,7 +6,7 @@ import { StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import { Text, useTheme, View } from "tamagui";
 const ConversationMini = (profile: Profile) => {
-  console.log("conversation mini", profile);
+  // console.log("conversation mini", profile);
   const conversation = profile.conversations[0];
 
   const recentMessage = conversation.latest_message;

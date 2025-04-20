@@ -2,7 +2,6 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const SAVED_PROMPTS: Record<string, string> = {};
-const INTEREST_REGISTRY: Record<string, string> = {};
 const GLOBAL_INTEREST_LIST: string[] = [];
 const supabaseUrl = Deno.env.get("SUPABASE_URL");
 const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -14,7 +13,6 @@ export interface Profile {
   interests: string[];
   conversations: any[];
   location: {
-    city: string;
     point: { longitude: number; latitude: number };
     distance?: number;
   };
@@ -80,7 +78,7 @@ export const getMediaUrls = async (userIds: string[]) => {
         .from("profile-images")
         .list(id);
 
-      console.log("Media data for user:", id, mediaData, mediaError);
+      // console.log("Media data for user:", id, mediaData, mediaError);
 
       if (mediaError || !mediaData || mediaData.length === 0) {
         mediaMap[id] = [];
@@ -109,7 +107,7 @@ export const getMediaUrls = async (userIds: string[]) => {
     })
   );
 
-  console.log("Media URLs fetched:", mediaMap);
+  // console.log("Media URLs fetched:", mediaMap);
 
   return mediaMap;
 };
@@ -119,7 +117,7 @@ const constructProfile = (
   mediaUrls: Record<string, string[]>,
   { minimal = false }: { minimal?: boolean }
 ) => {
-  console.log("Constructing profile for user data:", userData);
+  // console.log("Constructing profile for user data:", userData);
   const media = mediaUrls[userData.id];
   if (!media || media.length === 0) {
     console.error("No media found for user:", userData.id);
@@ -131,11 +129,10 @@ const constructProfile = (
   } else {
     data["interests"] =
       userData.profile_interests?.map(
-        (interest: { interest_registry: { interest: string } }) =>
-          interest.interest_registry.interest
+        (interest: { interest_registry: { id: string } }) =>
+          interest.interest_registry.id
       ) || [];
     data["location"] = {
-      city: userData.profile_locations.city,
       point: userData.profile_locations.point,
       distance: userData.profile_locations.distance,
     };
@@ -164,17 +161,19 @@ export const getUserData = async (
     exclude,
     sourceId,
     recommender,
+    mode = "flatmate",
   }: {
     minimal?: boolean;
     exclude?: boolean;
     sourceId?: string;
     recommender?: boolean;
+    mode?: "landlord" | "flatmate";
   } = {}
 ) => {
   if (typeof userId === "string") {
     userId = [userId];
   }
-  console.log("Fetching user data for IDs:", userId, minimal);
+  // console.log("Fetching user data for IDs:", userId, minimal);
   //   if minimal is true we only return data that is needed for inital loading
   //   if minimal is false we return all data
 
@@ -193,27 +192,29 @@ export const getUserData = async (
     `
     : `
       profile_information!profile_id(*, profile_information_registry!key(label, priority_order)),
-      profile_interests!profile_id(interest_registry!id(interest)),
-      profile_locations!profile_id(point, city)
+      profile_interests!profile_id(interest_registry!id(id)),
+      profile_locations!profile_id(point)
     `;
 
   let userData, userError;
   if (exclude) {
-    console.log("Excluding user IDs:", userId);
+    // Get user data for all users except the given user IDs
+    // console.log("Excluding user IDs:", userId);
     const { data: _userData, error: _userError } = await supabase
       .from("profiles")
       .select(
         `
-              full_name,
-              type,
-              id,
-              ${getUserDataQuery}
-              `
+          full_name,
+          type,
+          id,
+          ${getUserDataQuery}
+          `
       )
       .filter("id", "not.in", `(${userId.join(",")})`);
     userData = _userData;
     userError = _userError;
   } else {
+    // Get user data for the given user IDs
     const { data: _userData, error: _userError } = await supabase
       .from("profiles")
       .select(
@@ -224,6 +225,7 @@ export const getUserData = async (
               ${getUserDataQuery}
               `
       )
+      .filter("type", "eq", mode)
       .in("id", userId);
     userData = _userData;
     userError = _userError;
@@ -233,7 +235,7 @@ export const getUserData = async (
     if (GLOBAL_INTEREST_LIST.length === 0) {
       const { data: interestData, error: interestError } = await supabase
         .from("interest_registry")
-        .select("id, interest");
+        .select("id");
 
       if (interestError) {
         return console.error(
@@ -241,10 +243,6 @@ export const getUserData = async (
           interestError
         );
       }
-
-      interestData.forEach((interest) => {
-        INTEREST_REGISTRY[interest.interest] = interest.id;
-      });
 
       GLOBAL_INTEREST_LIST.push(...interestData.map((interest) => interest.id));
     }
@@ -268,17 +266,20 @@ export const getUserData = async (
     const sourceProfile = userData.find((u) => u.id === sourceId);
 
     const sourceVector = vectorize(
-      sourceProfile?.profile_interests.map(
-        (i) => INTEREST_REGISTRY[i.interest_registry.interest]
-      )
+      sourceProfile?.profile_interests.map((i) => i.interest_registry.id)
     );
+
+    // console.log("Source vector for user ID", sourceId, "is", sourceVector);
 
     userData = userData
       .map((user) => {
         const targetVector = vectorize(
-          user.profile_interests.map(
-            (i) => INTEREST_REGISTRY[i.interest_registry.interest]
-          )
+          user.profile_interests.map((i) => i.interest_registry.id)
+        );
+        // console.log("Target vector for user ID", user.id, "is", targetVector);
+        // console.log(
+          "Cosine similarity between source and target vectors:",
+          cosineSimilarity(sourceVector, targetVector)
         );
         return {
           ...user,
@@ -290,14 +291,18 @@ export const getUserData = async (
       })
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, 10);
+
+    // console.log("User data sorted by similarity:", userData);
   }
 
   if (!userData || userData.length === 0) {
+    console.error("No user data found:", userError);
     return [];
   }
 
   if (exclude) userId = userData.map((user) => user.id);
 
+  // console.log("User data fetched:", userData);
   // Get media URLs for all users
   const mediaUrls = await getMediaUrls(userId);
 
@@ -337,11 +342,15 @@ export const getUserData = async (
   });
 };
 
-export const getConnectedUserIds = async (userId: string) => {
+export const getConnectedUserIds = async (
+  userId: string,
+  mode: "landlord" | "flatmate"
+) => {
   const { data: connectionData, error: connectionError } = await supabase
     .from("connections")
     .select(`cohert2, cohert1`)
-    .or(`cohert1.eq.${userId},cohert2.eq.${userId}`);
+    .or(`cohert1.eq.${userId},cohert2.eq.${userId}`)
+    .eq("type", mode);
 
   if (connectionError) {
     return { status: "success", response: [] };
@@ -383,7 +392,10 @@ export const getDiscoveryProfiles = async (
   sourceId: string,
   filters: Record<string, any>
 ) => {
-  const { response: connectedUsersIds } = await getConnectedUserIds(sourceId);
+  const { response: connectedUsersIds } = await getConnectedUserIds(
+    sourceId,
+    "flatmate"
+  );
   const { response: likedUserIds } = await getLikedUserIds(sourceId);
 
   const combinedUserIds = [...connectedUsersIds, ...likedUserIds];
@@ -404,9 +416,12 @@ export const getDiscoveryProfiles = async (
 
 export const getConnectedUsers = async (
   sourceId: string,
-  { minimal }: { minimal: boolean }
+  { minimal, mode }: { minimal: boolean; mode: "landlord" | "flatmate" }
 ) => {
-  const { response: connectedUserIds } = await getConnectedUserIds(sourceId);
+  const { response: connectedUserIds } = await getConnectedUserIds(
+    sourceId,
+    mode
+  );
   const connectedUsers = await getUserData(connectedUserIds, {
     minimal,
     sourceId,

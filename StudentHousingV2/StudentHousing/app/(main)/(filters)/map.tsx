@@ -1,44 +1,74 @@
+import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Input, Slider, useTheme, View } from "tamagui";
+import { useTheme, View } from "tamagui";
 import { HeaderWithBack } from ".";
 import { Filter } from "@/typings";
 import { useLocalSearchParams } from "expo-router";
+import { getSavedFilters, saveFilter } from "@/utils/filterUtils";
+import { LocationPicker } from "@/components/LocationPicker"; // make sure the path is correct
 
 const MapScreen = () => {
   const { item } = useLocalSearchParams();
+  const theme = useTheme();
+
   if (!item) return null;
   const filter = JSON.parse(Array.isArray(item) ? item[0] : item) as Filter;
-  const theme = useTheme();
+
+  const [initialLocation, setInitialLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    range: number;
+  } | null>(null);
+
+  const [currentLocation, setCurrentLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    range: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const savedFilters = await getSavedFilters();
+        const savedValue = savedFilters[filter.filter_key];
+
+        if (savedValue) {
+          setInitialLocation(savedValue);
+        }
+      } catch (error) {
+        console.error("Error loading saved filters:", error);
+      }
+    };
+
+    fetchData();
+  }, [filter.filter_key]);
+
+  const handleSaveFilter = () => {
+    if (currentLocation) {
+      saveFilter(filter.filter_key, currentLocation);
+    }
+  };
+
   return (
     <>
       <HeaderWithBack page={filter.label} />
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background.val }}>
-        <View flex={1} gap={"$8"} paddingInline={"$4"}>
-          <View display="flex" gap={"$4"}>
-            <View
-              width={"100%"}
-              style={{ borderRadius: 8 }}
-              aspectRatio={1}
-              bg={"$color02"}
-            ></View>
-            <Input placeholder="Enter your address" />
-          </View>
-          <Slider
-            defaultValue={[0]}
-            min={0}
-            max={100}
-            step={1}
-            orientation="horizontal"
-            size="$4"
-            bg={"$background"}
-          >
-            <Slider.Track bg={"$color02"}>
-              <Slider.TrackActive bg={"$color04"} />
-            </Slider.Track>
-            <Slider.Thumb index={0} size={"$3"} circular={true} />
-          </Slider>
-        </View>
-      </SafeAreaView>
+      <View
+        flex={1}
+        gap="$4"
+        bg={"$background"}
+        paddingBlock={"$4"}
+        paddingInline="$4"
+      >
+        {initialLocation && (
+          <LocationPicker
+            initialLocation={initialLocation}
+            onLocationChange={(loc) => setCurrentLocation(loc)}
+            onSave={handleSaveFilter}
+            headerText={filter.label}
+            saveButtonText="Save Location"
+          />
+        )}
+      </View>
     </>
   );
 };
