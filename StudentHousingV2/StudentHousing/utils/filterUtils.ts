@@ -157,7 +157,7 @@ export const getFilterDescription = (
 export const getLandlordMode = async (): Promise<boolean> => {
   try {
     const mode = await AsyncStorage.getItem("viewMode");
-    return mode === "landlord";
+    return mode === "accommodation";
   } catch (error) {
     console.error("Error getting view mode:", error);
     return false;
@@ -166,7 +166,7 @@ export const getLandlordMode = async (): Promise<boolean> => {
 
 export const setLandlordMode = async (mode: boolean): Promise<void> => {
   try {
-    await AsyncStorage.setItem("viewMode", mode ? "landlord" : "flatmate");
+    await AsyncStorage.setItem("viewMode", mode ? "accommodation" : "flatmate");
   } catch (error) {
     console.error("Error setting view mode:", error);
   }

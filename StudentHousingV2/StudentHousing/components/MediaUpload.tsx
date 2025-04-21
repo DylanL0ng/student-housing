@@ -7,6 +7,7 @@ import { AlertDialog, Button, useTheme, View, XStack, YStack } from "tamagui";
 import * as ImagePicker from "expo-image-picker";
 import supabase from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
+import { useProfile } from "@/providers/ProfileProvider";
 
 export interface ImageObject {
   uri: string;
@@ -20,11 +21,12 @@ export interface MediaUploadProps {
   onLoad: () => void;
 }
 
-export const uploadImage = async (session: Session, image: ImageObject) => {
+export const uploadImage = async (profileId: string, image: ImageObject) => {
   try {
     const arraybuffer = await fetch(image.uri).then((res) => res.arrayBuffer());
     const fileExt = image.uri.split(".").pop()?.toLowerCase() ?? "jpeg";
-    const path = `${session?.user.id}/${image.order}.${fileExt}`;
+    const path = `${profileId}/${image.order}.${fileExt}`;
+
     const { error } = await supabase.storage
       .from("profile-images")
       .update(path, arraybuffer, {
@@ -37,14 +39,14 @@ export const uploadImage = async (session: Session, image: ImageObject) => {
   }
 };
 
-export const deleteImage = async (session: Session, image: ImageObject) => {
+export const deleteImage = async (profileId: string, image: ImageObject) => {
   try {
     if (!image) return;
 
     const fileExt = image.uri.split(".").pop()?.toLowerCase() ?? "jpeg";
     const { error } = await supabase.storage
       .from("profile-images")
-      .remove([`${session.user.id}/${image.order}.${fileExt}`]);
+      .remove([`${profileId}/${image.order}.${fileExt}`]);
 
     if (error) throw error;
   } catch (error) {
@@ -60,9 +62,13 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 }) => {
   const theme = useTheme();
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [replaceModalOpen, setReplaceModalOpen] = useState(false);
   const [imageToDelete, setImageToDelete] = useState<ImageObject | null>(null);
+  const [imageToReplace, setImageToReplace] = useState<number | null>(null);
   const [images, setImages] = useState<ImageObject[]>([]);
+
+  const { activeProfileId } = useProfile();
 
   // Load default images on mount
   useEffect(() => {
@@ -70,46 +76,62 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
     onLoad();
   }, [defaultImages, onLoad]);
 
-  const handleImagePick = useCallback(async (order: number) => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        exif: false,
-        allowsEditing: true,
-        allowsMultipleSelection: false,
-        quality: 1,
-      });
+  const launchImagePicker = useCallback(
+    async (order: number) => {
+      if (activeProfileId === null) return;
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          exif: false,
+          allowsEditing: true,
+          allowsMultipleSelection: false,
+          quality: 1,
+        });
 
-      if (result.canceled || !result.assets?.length) return;
+        if (result.canceled || !result.assets?.length) return;
 
-      const image = result.assets[0];
-      if (!image.uri) throw new Error("No image uri!");
+        const image = result.assets[0];
+        if (!image.uri) throw new Error("No image uri!");
 
-      const newImage = { order, uri: image.uri };
+        const newImage = { order, uri: image.uri };
 
-      setImages((prev) => {
-        const filtered = prev.filter((img) => img.order !== order);
-        return [...filtered, newImage];
-      });
+        setImages((prev) => {
+          const filtered = prev.filter((img) => img.order !== order);
+          return [...filtered, newImage];
+        });
 
-      const session = await supabase.auth
-        .getSession()
-        .then((res) => res.data.session);
-      if (session) {
-        await uploadImage(session, newImage);
+        console.log("New image:", newImage, activeProfileId);
+        await uploadImage(activeProfileId, newImage);
+        onUpload(newImage);
+      } catch (error) {
+        console.error("Image pick error:", error);
       }
-    } catch (error) {
-      console.error("Image pick error:", error);
-    }
-  }, []);
+    },
+    [activeProfileId, onUpload]
+  );
+
+  const handleImagePick = useCallback(
+    (order: number) => {
+      const existingImage = images.find((img) => img.order === order);
+
+      if (existingImage) {
+        // If there's already an image in this slot, show replacement confirmation
+        setImageToReplace(order);
+        setReplaceModalOpen(true);
+      } else {
+        // If no existing image, just pick a new one
+        launchImagePicker(order);
+      }
+    },
+    [images, launchImagePicker]
+  );
 
   const handleDeleteImage = useCallback((image: ImageObject) => {
     setImageToDelete(image); // Set the image to delete
-    setModalOpen(true); // Open modal
+    setDeleteModalOpen(true); // Open delete modal
   }, []);
 
   const handleImageDeleteAccept = useCallback(async () => {
-    // console.log("Deleting image:", imageToDelete);
     if (!imageToDelete) return;
 
     setImages((prev) =>
@@ -118,13 +140,26 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
     onDelete(imageToDelete);
 
-    setModalOpen(false); // Close modal after deleting
+    setDeleteModalOpen(false); // Close modal after deleting
     setImageToDelete(null); // Reset image to delete
-  }, [imageToDelete]);
+  }, [imageToDelete, onDelete]);
 
   const handleImageDeleteReject = useCallback(() => {
-    setModalOpen(false); // Close modal
+    setDeleteModalOpen(false); // Close modal
     setImageToDelete(null); // Reset image to delete
+  }, []);
+
+  const handleImageReplaceAccept = useCallback(() => {
+    if (imageToReplace !== null) {
+      launchImagePicker(imageToReplace);
+    }
+    setReplaceModalOpen(false);
+    setImageToReplace(null);
+  }, [imageToReplace, launchImagePicker]);
+
+  const handleImageReplaceReject = useCallback(() => {
+    setReplaceModalOpen(false);
+    setImageToReplace(null);
   }, []);
 
   const renderImages = useMemo(() => {
@@ -148,6 +183,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
           {image ? (
             <>
               <Image
+                cachePolicy={"none"}
                 source={image.uri}
                 style={[
                   styles.image,
@@ -176,11 +212,16 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
         </View>
       );
     });
-  }, [images, handleImagePick]);
+  }, [images, handleImagePick, handleDeleteImage]);
 
   return (
     <>
-      <AlertDialog open={modalOpen} native onOpenChange={setModalOpen}>
+      {/* Delete Image Alert Dialog */}
+      <AlertDialog
+        open={deleteModalOpen}
+        native
+        onOpenChange={setDeleteModalOpen}
+      >
         <AlertDialog.Trigger asChild>
           <></>
         </AlertDialog.Trigger>
@@ -210,7 +251,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
             y={0}
           >
             <YStack gap="$4">
-              <AlertDialog.Title>Are you sure?</AlertDialog.Title>
+              <AlertDialog.Title>Delete Image</AlertDialog.Title>
               <AlertDialog.Description>
                 Are you sure you want to delete this image? This action cannot
                 be undone.
@@ -220,7 +261,60 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
                   <Button>Cancel</Button>
                 </AlertDialog.Cancel>
                 <AlertDialog.Action onPress={handleImageDeleteAccept} asChild>
-                  <Button theme="accent">Accept</Button>
+                  <Button theme="accent">Delete</Button>
+                </AlertDialog.Action>
+              </XStack>
+            </YStack>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog>
+
+      {/* Replace Image Alert Dialog */}
+      <AlertDialog
+        open={replaceModalOpen}
+        native
+        onOpenChange={setReplaceModalOpen}
+      >
+        <AlertDialog.Trigger asChild>
+          <></>
+        </AlertDialog.Trigger>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay
+            key="overlay"
+            animation="quick"
+            opacity={0.5}
+            enterStyle={{ opacity: 0 }}
+            exitStyle={{ opacity: 0 }}
+          />
+          <AlertDialog.Content
+            bordered
+            elevate
+            key="content"
+            animation={[
+              "quick",
+              {
+                opacity: { overshootClamping: true },
+              },
+            ]}
+            enterStyle={{ x: 0, y: -20, opacity: 0, scale: 0.9 }}
+            exitStyle={{ x: 0, y: 10, opacity: 0, scale: 0.95 }}
+            x={0}
+            scale={1}
+            opacity={1}
+            y={0}
+          >
+            <YStack gap="$4">
+              <AlertDialog.Title>Replace Image</AlertDialog.Title>
+              <AlertDialog.Description>
+                Do you want to replace this image with a new one? The current
+                image will be lost.
+              </AlertDialog.Description>
+              <XStack gap="$3" justifyContent="flex-end">
+                <AlertDialog.Cancel onPress={handleImageReplaceReject} asChild>
+                  <Button>Cancel</Button>
+                </AlertDialog.Cancel>
+                <AlertDialog.Action onPress={handleImageReplaceAccept} asChild>
+                  <Button theme="accent">Replace</Button>
                 </AlertDialog.Action>
               </XStack>
             </YStack>

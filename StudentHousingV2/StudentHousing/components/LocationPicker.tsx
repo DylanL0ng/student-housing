@@ -3,7 +3,6 @@ import { View, Text, Button, Slider, useTheme } from "tamagui";
 import MapView, { Circle, Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { Alert } from "react-native";
-import { getCityFromCoordinates } from "@/app/(main)/(filters)";
 import { Compass } from "@tamagui/lucide-icons";
 
 type LocationPickerProps = {
@@ -39,8 +38,6 @@ export const LocationPicker = ({
   );
 
   const [radius, setRadius] = useState(initialLocation?.range ?? 1000);
-
-  const [locationLabel, setLocationLabel] = useState<string | null>(null);
 
   const handleRegionChange = (region) => {
     setCenter({
@@ -84,10 +81,6 @@ export const LocationPicker = ({
     if (onLocationChange) {
       onLocationChange({ ...center, range: radius });
     }
-
-    getCityFromCoordinates(center.latitude, center.longitude).then((city) => {
-      setLocationLabel(city);
-    });
   }, [center, radius]);
 
   return (

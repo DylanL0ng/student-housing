@@ -5,6 +5,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "tamagui";
 import supabase from "@/lib/supabase";
+import generateFakeUsers from "@/scripts/generateFakeUsers";
 
 const RootLayout = () => {
   const { session } = useAuth();
@@ -13,27 +14,24 @@ const RootLayout = () => {
     if (!session) return;
 
     const { data, error } = await supabase
-      .from("profiles")
+      .from("profile_mapping")
       .select("created")
-      .eq("id", session.user.id)
+      .eq("linked_profile", session.user.id)
+      .eq("type", "flatmate")
       .single();
 
-    if (error) {
+    if (error || !data) {
       supabase.auth.signOut();
-      return router.replace("/login");
-    }
-
-    if (!data) {
       return router.replace("/login");
     }
 
     if (data.created) return router.replace("/(main)/(tabs)");
 
-    console.log("test");
     return router.replace("/creation");
   };
 
   useEffect(() => {
+    // generateFakeUsers(1);
     handleSession(session);
   }, [session]);
 

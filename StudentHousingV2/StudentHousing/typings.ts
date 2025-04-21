@@ -55,7 +55,7 @@ export interface Profile {
   };
   information: [];
   media: string[];
-  has_conversation: boolean;
+  // has_conversation: boolean;
   latest_message?: string;
 }
 export interface Conversation {

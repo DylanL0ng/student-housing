@@ -10,6 +10,7 @@ import Loading from "@/components/Loading";
 
 import { H6, View } from "tamagui";
 import { useViewMode } from "@/providers/ViewModeProvider";
+import { useProfile } from "@/providers/ProfileProvider";
 
 // Component to render section headers
 const SectionHeader = ({ title }) => {
@@ -56,7 +57,7 @@ const ConversationSeparator = () => (
 );
 
 export default function MessagesScreen() {
-  const { session } = useAuth();
+  const { activeProfileId } = useProfile();
   const [conversationHistory, setConversationHistory] = useState<Profile[]>([]);
   const [unInteractedMatches, setUnInteractedMatches] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +72,7 @@ export default function MessagesScreen() {
   // Use a ref to store the current message channel subscription
   const messageChannelRef = useRef<any>(null);
 
-  if (!session) return <></>;
+  if (!activeProfileId) return <></>;
 
   // Function to update message subscription when conversation list changes
   const updateMessageSubscription = useCallback(() => {
@@ -196,7 +197,7 @@ export default function MessagesScreen() {
         "getConnections",
         {
           body: {
-            userId: session.user.id,
+            userId: activeProfileId,
             mode: viewMode,
           },
         }
@@ -241,13 +242,13 @@ export default function MessagesScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [session, viewMode]);
+  }, [activeProfileId, viewMode]);
 
   // Set up realtime subscription for new conversations
   const setupMembershipSubscription = useCallback(() => {
-    if (!session) return () => {};
+    if (!activeProfileId) return () => {};
 
-    const userId = session.user.id;
+    const userId = activeProfileId;
     const conversationMembersChannel = supabase.channel("conversations");
 
     // Subscribe to conversation_members table changes
@@ -261,13 +262,11 @@ export default function MessagesScreen() {
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
-          // console.log("Received payload:", payload);
           if (payload.eventType === "INSERT") {
             const { conversation_id } = payload.new;
 
             // Only process if we're not already subscribed
             if (!subscribedConversations.includes(conversation_id)) {
-              // console.log("Subscribing to new conversation:", conversation_id);
               // Add to subscribed conversations immediately
               setSubscribedConversations((prev) => [...prev, conversation_id]);
 
@@ -281,7 +280,6 @@ export default function MessagesScreen() {
 
               const otherUserId = data?.user_id;
 
-              // console.log("Other user ID:", otherUserId);
               // Get profile data
               const { data: profileData } = await supabase.functions.invoke(
                 "getProfile",
@@ -294,8 +292,6 @@ export default function MessagesScreen() {
                 }
               );
 
-              // console.log("Profile data:", profileData);
-
               if (profileData && profileData.length > 0) {
                 const newConnection = profileData[0] as Profile;
 
@@ -306,7 +302,6 @@ export default function MessagesScreen() {
                 if (newConnection.conversations[0].latest_message) {
                   setConversationHistory((prev) => [newConnection, ...prev]);
                 } else {
-                  // console.log("adding to uninteracted matches");
                   setUnInteractedMatches((prev) => [newConnection, ...prev]);
                 }
               }
@@ -345,7 +340,7 @@ export default function MessagesScreen() {
     return () => {
       supabase.removeChannel(conversationMembersChannel);
     };
-  }, [session, subscribedConversations]);
+  }, [activeProfileId, subscribedConversations]);
 
   // Fetch connections on component mount
   useEffect(() => {
@@ -394,14 +389,19 @@ export default function MessagesScreen() {
         height={"100%"}
         paddingInline={"$4"}
       >
-        <FlatList
-          overScrollMode="never"
-          ListHeaderComponent={renderListHeader}
-          data={conversationHistory}
-          renderItem={({ item }) => <ConversationMini {...item} />}
-          ItemSeparatorComponent={ConversationSeparator}
-          keyExtractor={(item, index) => index.toString()}
-        />
+        {conversationHistory.length === 0 &&
+        unInteractedMatches.length === 0 ? (
+          <Loading title="No connections found" />
+        ) : (
+          <FlatList
+            overScrollMode="never"
+            ListHeaderComponent={renderListHeader}
+            data={conversationHistory}
+            renderItem={({ item }) => <ConversationMini {...item} />}
+            ItemSeparatorComponent={ConversationSeparator}
+            keyExtractor={(item, index) => index.toString()}
+          />
+        )}
       </View>
     </SafeAreaView>
   );

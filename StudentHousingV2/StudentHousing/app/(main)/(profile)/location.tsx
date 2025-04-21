@@ -46,7 +46,7 @@ const LocationScreen = () => {
         type: "success",
         text1: "Location saved",
       });
-      // console.log("Location saved:", selectedLocation);
+      console.log("Location saved:", selectedLocation);
       //   Alert.alert("Success", "Your location has been updated.");
     } catch (error) {
       console.error("Failed to update location", error);

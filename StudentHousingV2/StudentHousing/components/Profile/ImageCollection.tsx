@@ -1,4 +1,4 @@
-import  { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, GestureResponderEvent } from "react-native";
 import { TouchableOpacity, View } from "react-native";
 import { Image } from "expo-image";
@@ -51,6 +51,7 @@ const ImageCollection = ({
         ))}
       </View>
       <Image
+        cachePolicy={"none"}
         transition={0}
         source={media[currentMedia]}
         style={{ ..._styles.float, borderRadius: 4, height: "80%" }}

@@ -1,68 +1,75 @@
-import { Entypo, MaterialIcons } from "@expo/vector-icons";
+import { Entypo } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Image, StyleSheet, Text, TouchableOpacity } from "react-native";
-import ImageCollection from "./Profile/ImageCollection";
-import { Profile } from "@/typings";
-
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { View } from "tamagui";
 import { router } from "expo-router";
-import { useProfile } from "@/providers/ProfileProvider";
+import { useEffect, useState, useMemo } from "react";
 
-const ProfileCard = ({ profile }: { profile: Profile }) => {
-  // console.log("ProfileCard", profile);
+import ImageCollection from "./Profile/ImageCollection";
+import { useProfile } from "@/providers/ProfileProvider";
+import { Profile, InformationItem } from "@/typings";
+import { calculateAge } from "@/utils/utils";
+
+type ProfileCardProps = {
+  profile: Profile;
+};
+
+const ProfileCard = ({ profile }: ProfileCardProps) => {
   const { getInterestName } = useProfile();
+  const { information, interests = [], media } = profile;
+
+  const [parsedAge, setParsedAge] = useState<number>(0);
+
+  // Parse profile information into a more usable format
+  const parsedProfileInformation = useMemo(() => {
+    return information.reduce<Record<string, string>>(
+      (acc, item: InformationItem) => {
+        acc[item.key] = item.value.data.value;
+        return acc;
+      },
+      {}
+    );
+  }, [information]);
+
+  const { name, age } = parsedProfileInformation;
+
+  useEffect(() => {
+    if (age) {
+      setParsedAge(calculateAge(age));
+    }
+  }, [age]);
+
+  const handleProfilePress = () => {
+    router.push({
+      pathname: "/(main)/(modals)/profile",
+      params: {
+        profile: JSON.stringify(profile),
+      },
+    });
+  };
+
   return (
     <View style={styles.body}>
       <View style={styles.float}>
-        <ImageCollection media={profile.media} />
+        <ImageCollection media={media} />
         <LinearGradient
           colors={["transparent", "rgba(0,0,0,1)"]}
           locations={[0.3, 0.75]}
-          style={{ ...styles.float, pointerEvents: "none" }}
+          style={styles.gradient}
         />
       </View>
-      <View style={{ ...styles.personalInfoWrapper }}>
+
+      <View style={styles.personalInfoWrapper}>
         <Text style={styles.personalInfoGreeting}>
-          {profile.title}, {0}
+          {name}, {parsedAge}
         </Text>
-        <View
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-          }}
-        >
-          {/* <View style={styles.personalInfoEntryWrapper}>
-            <Text>
-              <MaterialIcons name="savings" color={"#e5e7eb"} size={18} />
-            </Text>
-            <Text style={styles.personalInfoEntryText}>€750</Text>
-          </View> */}
-          {/* <View style={styles.personalInfoEntryWrapper}>
-            <Text>
-              <Entypo name="location-pin" color={"#e5e7eb"} size={32} />
-            </Text>
-            <Text style={styles.personalInfoLocationText}>
-              {profile.location.city} - {profile.location.distance} km away
-            </Text>
-          </View> */}
-        </View>
-        <View
-          style={{
-            display: "flex",
-            width: "100%",
-            overflow: "hidden",
-            // backgroundColor: "red",
-            flexDirection: "row",
-            gap: 8,
-          }}
-        >
-          {profile.interests?.map((interest, index) => (
+
+        <View style={styles.interestsContainer}>
+          {interests.map((interest, index) => (
             <View
               key={index}
-              // boxSizing="content-box"
-              // bg={"$yellow5"}
-              borderWidth={"$1"}
-              borderColor={"$yellow5"}
+              borderWidth="$1"
+              borderColor="$yellow5"
               style={styles.personalInfoInterestsWrapper}
             >
               <Text style={styles.personalInfoInterestsText}>
@@ -73,16 +80,7 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
         </View>
       </View>
 
-      <TouchableOpacity
-        onPress={() =>
-          router.push({
-            pathname: "/(main)/(modals)/profile",
-            params: {
-              profile: JSON.stringify(profile),
-            },
-          })
-        }
-      >
+      <TouchableOpacity onPress={handleProfilePress}>
         <View style={styles.dropdownButton}>
           <Entypo name="chevron-down" size={28} color="white" />
         </View>
@@ -109,6 +107,14 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+  gradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: "none",
+  },
   personalInfoWrapper: {
     padding: 8,
     flex: 1,
@@ -120,22 +126,12 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
   },
-  personalInfoEntryWrapper: {
-    flex: 1,
+  interestsContainer: {
+    display: "flex",
+    width: "100%",
+    overflow: "hidden",
     flexDirection: "row",
-    justifyContent: "flex-start",
-    alignItems: "center",
     gap: 8,
-    // width: "100%",
-    flexWrap: "wrap",
-  },
-  personalInfoEntryText: {
-    color: "#e5e7eb",
-  },
-  personalInfoLocationText: {
-    color: "#e5e7eb",
-    fontSize: 16,
-    fontWeight: "medium",
   },
   personalInfoInterestsWrapper: {
     boxSizing: "border-box",
@@ -158,4 +154,5 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
 });
+
 export default ProfileCard;

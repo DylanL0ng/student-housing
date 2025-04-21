@@ -26,7 +26,7 @@ export default async function generateFakeUsers(numUsers: number) {
   for (let count = 0; count < numUsers; count++) {
     try {
       const name = `${faker.person.firstName()}`;
-      const budget = faker.number.int({ min: 1000, max: 3000 });
+      // const budget = faker.number.int({ min: 1000, max: 3000 });
       const email = faker.internet.email();
 
       // Create user
@@ -39,77 +39,201 @@ export default async function generateFakeUsers(numUsers: number) {
 
       if (userError || !user?.user?.id)
         return console.error(userError?.message || "User creation failed");
-      const user_id = user.user.id;
 
-      // Update profile
-      const { error: updateUserError } = await supabase
-        .from("profiles")
-        .update({ budget, full_name: name, created: true })
-        .eq("id", user_id);
+      const { data: userIds, error: userIdError } = await supabase
+        .from("profile_mapping")
+        .select("id, type")
+        .eq("linked_profile", user.user.id);
 
-      if (updateUserError) return console.error(updateUserError.message);
-
-      const latitude: number = faker.location.latitude();
-      const longitude: number = faker.location.longitude();
-
-      const geocode = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
-
-      let city = "unknown";
-      let country = "unknown";
-      if (geocode.length > 0) {
-        const { city: _city, country: _country } = geocode[0];
-        if (_city) city = _city;
-        if (_country) country = _country;
+      if (userIdError || !userIds) {
+        console.error(userIdError?.message || "Failed to get profile mappings");
+        return;
       }
 
-      const { data: locationData, error: locationError } = await supabase
-        .from("profile_locations")
-        .upsert({
-          point: `POINT(${latitude} ${longitude})`,
-          city: city,
-          user_id: user_id,
-        });
+      // Parse userIds into an object with type as key and id as value
+      const profileIds = userIds.reduce(
+        (acc: Record<string, string>, mapping) => {
+          if (mapping.type && mapping.id) {
+            acc[mapping.type] = mapping.id;
+          }
+          return acc;
+        },
+        {}
+      );
 
-      if (locationError)
-        return console.error("Error inserting location:", locationError);
+      // handle flatmate
+      const flatmateId = profileIds["flatmate"];
+      if (!flatmateId) {
+        console.error("Flatmate ID not found");
+        return;
+      }
 
-      // Generate interests
-      const interestCount = Math.floor(Math.random() * 5) + 1;
-      const shuffledInterests = [...interests].sort(() => Math.random() - 0.5);
-      const userInterests = shuffledInterests.slice(0, interestCount);
+      await supabase.from("profile_information").upsert([
+        {
+          profile_id: flatmateId,
+          key: "name",
+          value: {
+            data: {
+              value: name,
+            },
+          },
+          view: "flatmate",
+        },
+        {
+          profile_id: flatmateId,
+          key: "budget",
+          value: {
+            data: {
+              value: 1000,
+            },
+          },
+          view: "flatmate",
+        },
+        {
+          profile_id: flatmateId,
+          key: "university",
+          value: {
+            data: {
+              value: ["Technlogical University of Dublin"],
+            },
+          },
+          view: "flatmate",
+        },
+        {
+          profile_id: flatmateId,
+          key: "biography",
+          value: {
+            data: {
+              value: faker.lorem.paragraph(2),
+            },
+          },
+          view: "flatmate",
+        },
+        {
+          profile_id: flatmateId,
+          key: "gender",
+          value: {
+            data: {
+              value: ["male"],
+            },
+          },
+          view: "flatmate",
+        },
+        {
+          profile_id: flatmateId,
+          key: "age",
+          value: {
+            data: {
+              value: faker.date.birthdate(),
+            },
+          },
+          view: "flatmate",
+        },
+      ]);
 
-      // Insert interests
-      const { error: interestError } = await supabase
-        .from("profile_interests")
-        .insert(
-          userInterests.map((interest) => ({
-            user_id,
-            interest_id: interest,
-          }))
-        );
+      await supabase.from("profile_locations").upsert([
+        {
+          profile_id: flatmateId,
+          point: `POINT(${faker.location.latitude()} ${faker.location.longitude()})`,
+        },
+      ]);
 
-      if (interestError)
-        return console.error("Error inserting interests:", interestError);
+      await supabase.from("profile_interests").upsert([
+        {
+          profile_id: flatmateId,
+          interest_id: interests[Math.floor(Math.random() * interests.length)],
+        },
+        {
+          profile_id: flatmateId,
+          interest_id: interests[Math.floor(Math.random() * interests.length)],
+        },
+        {
+          profile_id: flatmateId,
+          interest_id: interests[Math.floor(Math.random() * interests.length)],
+        },
+      ]);
 
       // Upload media
       const mediaCount = Math.floor(Math.random() * 3) + 1;
       for (let i = 0; i < mediaCount; i++) {
-        const media = faker.image.personPortrait();
+        const media = faker.image.avatar();
         const arraybuffer = await fetch(media).then((res) => res.arrayBuffer());
-        const path = `${user_id}/${i}.jpg`;
+        const path = `${flatmateId}/${i}.jpg`;
 
         await supabase.storage
           .from("profile-images")
           .update(path, arraybuffer, { contentType: "image/jpeg" });
       }
 
-      // Create interaction
-      await supabase
-        .from("profile_interactions")
-        .insert({ cohert1: user_id, cohert2: DEV_ID, type: "like" });
+      // // Update profile
+      // const { error: updateUserError } = await supabase
+      //   .from("profiles")
+      //   .update({ full_name: name })
+      //   .eq("id", user_id);
+
+      // if (updateUserError) return console.error(updateUserError.message);
+
+      // const latitude: number = faker.location.latitude();
+      // const longitude: number = faker.location.longitude();
+
+      // const geocode = await Location.reverseGeocodeAsync({
+      //   latitude,
+      //   longitude,
+      // });
+
+      // let city = "unknown";
+      // let country = "unknown";
+      // if (geocode.length > 0) {
+      //   const { city: _city, country: _country } = geocode[0];
+      //   if (_city) city = _city;
+      //   if (_country) country = _country;
+      // }
+
+      // const { data: locationData, error: locationError } = await supabase
+      //   .from("profile_locations")
+      //   .upsert({
+      //     point: `POINT(${latitude} ${longitude})`,
+      //     city: city,
+      //     user_id: user_id,
+      //   });
+
+      // if (locationError)
+      //   return console.error("Error inserting location:", locationError);
+
+      // // Generate interests
+      // const interestCount = Math.floor(Math.random() * 5) + 1;
+      // const shuffledInterests = [...interests].sort(() => Math.random() - 0.5);
+      // const userInterests = shuffledInterests.slice(0, interestCount);
+
+      // // Insert interests
+      // const { error: interestError } = await supabase
+      //   .from("profile_interests")
+      //   .insert(
+      //     userInterests.map((interest) => ({
+      //       user_id,
+      //       interest_id: interest,
+      //     }))
+      //   );
+
+      // if (interestError)
+      //   return console.error("Error inserting interests:", interestError);
+
+      // // Upload media
+      // const mediaCount = Math.floor(Math.random() * 3) + 1;
+      // for (let i = 0; i < mediaCount; i++) {
+      //   const media = faker.image.personPortrait();
+      //   const arraybuffer = await fetch(media).then((res) => res.arrayBuffer());
+      //   const path = `${user_id}/${i}.jpg`;
+
+      //   await supabase.storage
+      //     .from("profile-images")
+      //     .update(path, arraybuffer, { contentType: "image/jpeg" });
+      // }
+
+      // // Create interaction
+      // await supabase
+      //   .from("profile_interactions")
+      //   .insert({ cohert1: user_id, cohert2: DEV_ID, type: "like" });
 
       // // console.log(`Created user ${count + 1}/${numUsers}`);
     } catch (error) {

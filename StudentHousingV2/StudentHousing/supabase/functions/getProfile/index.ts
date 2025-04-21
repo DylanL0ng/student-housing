@@ -1,6 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { getUserData } from "../_utils/supabase.ts";
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -11,11 +10,13 @@ Deno.serve(async (req) => {
       },
     });
   }
-
   try {
     const { userId, minimal, mode } = await req.json();
-    const userDataResult = await getUserData([userId], { minimal, mode });
-
+    console.log("userId", userId, mode);
+    const userDataResult = await getUserData([userId], {
+      minimal,
+      mode,
+    });
     return new Response(JSON.stringify(userDataResult), {
       headers: {
         "Content-Type": "application/json",

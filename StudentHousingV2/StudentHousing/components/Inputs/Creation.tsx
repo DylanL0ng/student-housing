@@ -13,6 +13,7 @@ import supabase from "@/lib/supabase";
 import { View } from "tamagui";
 import { Question } from "@/app/(auth)/creation";
 import { LocationPicker } from "../LocationPicker";
+import { useProfile } from "@/providers/ProfileProvider";
 
 interface CreationInputFactoryProps {
   question: Question;
@@ -24,6 +25,7 @@ export const CreationInputFactory = ({
   state,
 }: CreationInputFactoryProps) => {
   const { session } = useAuth();
+  const { activeProfileId } = useProfile();
 
   if (!session) return <></>;
 
@@ -33,7 +35,7 @@ export const CreationInputFactory = ({
 
       const images = await supabase.storage
         .from("profile-images")
-        .list(session.user.id);
+        .list(activeProfileId);
 
       if (images.error) {
         console.error("Error loading images:", images.error);
@@ -44,7 +46,7 @@ export const CreationInputFactory = ({
         images.data.map(async (item) => {
           const { data } = await supabase.storage
             .from("profile-images")
-            .getPublicUrl(`${session.user.id}/${item.name}`);
+            .getPublicUrl(`${activeProfileId}/${item.name}`);
 
           const order = parseInt(item.name.split(".")[0]);
 

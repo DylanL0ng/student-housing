@@ -10,6 +10,7 @@ import { Question, Answer, Interest, ImageObject } from "@/typings";
 import { CreationInputFactory } from "@/components/Inputs/Creation";
 import { Button, Progress, Text, useTheme, View } from "tamagui";
 import Loading from "@/components/Loading";
+import { useProfile } from "@/providers/ProfileProvider";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -67,6 +68,8 @@ const CreateScreen = () => {
   const { session } = useAuth();
   const theme = useTheme();
 
+  const { activeProfileId } = useProfile();
+
   const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
   const [questionIndex, setQuestionIndex] = useState(0);
   const [submittingData, setSubmittingData] = useState(false);
@@ -109,6 +112,17 @@ const CreateScreen = () => {
       const sortedData = filteredData.sort(
         (a, b) => b.priority_order - a.priority_order
       );
+
+      console.log("sorted data", sortedData);
+      sortedData.push({
+        creation: {
+          title: "Upload some images of yourself",
+          description: "You can skip this question if you want.",
+        },
+        input_type: "media",
+        type: "media",
+        priority_order: 0,
+      });
 
       const parsedData = sortedData.map((item) => ({
         title: item.creation.title,
@@ -224,7 +238,7 @@ const CreateScreen = () => {
   const continueButtonPressed = async () => {
     if (!currentQuestion) return;
     if (continueDisabled) return;
-    if (!session) return;
+    if (!activeProfileId) return;
 
     let value;
 
@@ -287,10 +301,11 @@ const CreateScreen = () => {
           return value !== undefined;
         }
       );
+
       const { data, error } = await supabase.from("profile_information").upsert(
         parsedAnswers.map(([key, value]) => {
           return {
-            profile_id: session.user.id,
+            profile_id: activeProfileId,
             value: processAnswer(key, value),
             key,
             view: "flatmate",
@@ -298,17 +313,66 @@ const CreateScreen = () => {
         })
       );
 
+      // handle location
+      const location = newAnswers["location"].value;
+      console.log("handling location", location);
+      if (location) {
+        const geoPoint = {
+          type: "Point",
+          coordinates: [location.longitude, location.latitude], // [lng, lat]
+        };
+
+        console.log("test 1");
+        const { error: locationError } = await supabase
+          .from("profile_locations")
+          .upsert({
+            profile_id: activeProfileId,
+            point: geoPoint,
+          });
+        console.log("test 2");
+
+        if (locationError) {
+          console.error("Error saving location:", locationError);
+          return;
+        }
+      }
+
+      // handle interests
+      const interests = newAnswers["interests"].value;
+      console.log("handling interests", interests);
+      if (interests) {
+        console.log("test 3");
+        await supabase
+          .from("profile_interests")
+          .delete()
+          .eq("profile_id", activeProfileId);
+
+        console.log("test 4");
+        const { error } = await supabase.from("profile_interests").upsert(
+          interests.map((interest: Interest) => ({
+            profile_id: activeProfileId,
+            interest_id: interest,
+          }))
+        );
+
+        console.log("test 5");
+        if (error) {
+          console.error("Error saving interests:", error);
+          return;
+        }
+      }
+
       if (error) {
         console.error("Error saving data:", error);
         return;
       }
 
       const { error: createdError } = await supabase
-        .from("profiles")
+        .from("profile_mapping")
         .update({
           created: true,
         })
-        .eq("id", session.user.id);
+        .eq("id", activeProfileId);
 
       if (createdError) {
         console.error("Error updating created status:", createdError);

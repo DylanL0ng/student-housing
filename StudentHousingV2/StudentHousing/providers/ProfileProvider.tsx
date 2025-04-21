@@ -7,12 +7,15 @@ import React, {
   useEffect,
 } from "react";
 import { useAuth } from "./AuthProvider";
+import { useViewMode } from "./ViewModeProvider";
 
 type Location = {
   latitude: number;
   longitude: number;
   // range: number;
 };
+
+type ProfileType = "flatmate" | "accommodation";
 
 interface ProfileContextType {
   interests: string[];
@@ -23,6 +26,8 @@ interface ProfileContextType {
   getInterestName: (id: string) => string;
   location: Location | null;
   setLocation: (loc: Location) => void;
+  profileIds: Record<ProfileType, string>;
+  activeProfileId: string | null;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -36,10 +41,17 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
     Record<string, string>
   >({});
   const [location, _setLocation] = useState<Location | null>(null);
+  const [profileIds, setProfileIds] = useState<Record<ProfileType, string>>(
+    {} as Record<ProfileType, string>
+  );
 
   const { session } = useAuth();
+  const { viewMode } = useViewMode();
 
-  // Load interests and profile location
+  // Calculate the active profile ID based on the current view mode
+  const activeProfileId = profileIds[viewMode as ProfileType] || null;
+
+  // Load interests, profile location, and profile IDs
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase
@@ -60,15 +72,43 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
 
       if (!session?.user.id) return;
 
-      // Load user interests
+      const { data: userProfiles, error: userError } = await supabase
+        .from("profile_mapping")
+        .select("id, type")
+        .eq("linked_profile", session.user.id);
+
+      console.log(userProfiles);
+
+      if (userError || !userProfiles || userProfiles.length === 0) {
+        return console.error("Error fetching user profiles:", userError);
+      }
+
+      // Convert the user profiles to object with type as key and id as value
+      const profileMapping = userProfiles.reduce((acc, profile) => {
+        acc[profile.type as ProfileType] = profile.id;
+        return acc;
+      }, {} as Record<ProfileType, string>);
+
+      setProfileIds(profileMapping);
+    })();
+  }, [session?.user.id]);
+
+  // Load profile data whenever the active profile changes
+  useEffect(() => {
+    if (!activeProfileId) return;
+
+    (async () => {
+      // Load user interests for the active profile
       const { data: userInterests, error: interestError } = await supabase
         .from("profile_interests")
         .select("interest_id")
-        .eq("profile_id", session.user.id);
+        .eq("profile_id", activeProfileId);
+
       if (interestError) {
         console.error("Error fetching user interests:", interestError);
         return;
       }
+
       if (userInterests) {
         const interestIds = userInterests.map(
           (interest) => interest.interest_id
@@ -76,12 +116,11 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         _setInterests(interestIds);
       }
 
-      // Load location
-      // Load location
+      // Load location for the active profile
       const { data: profile, error: profileError } = await supabase
         .from("profile_locations")
         .select("point")
-        .eq("profile_id", session.user.id)
+        .eq("profile_id", activeProfileId)
         .single();
 
       if (!profile || profileError) {
@@ -106,30 +145,30 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         console.warn("Invalid coordinates format:", coordinates);
       }
     })();
-  }, [session?.user.id]);
+  }, [activeProfileId]);
 
   // Save interests when changed
   useEffect(() => {
     (async () => {
-      if (!session?.user.id) return;
+      if (!activeProfileId) return;
 
       await supabase
         .from("profile_interests")
         .delete()
-        .eq("profile_id", session.user.id);
+        .eq("profile_id", activeProfileId);
 
       await supabase.from("profile_interests").insert(
         interests.map((interest) => ({
-          profile_id: session?.user.id,
+          profile_id: activeProfileId,
           interest_id: interest,
         }))
       );
     })();
-  }, [interests]);
+  }, [interests, activeProfileId]);
 
   // Save location when changed
   useEffect(() => {
-    if (!location || !session?.user.id) return;
+    if (!location || !activeProfileId) return;
     (async () => {
       const geoPoint = {
         type: "Point",
@@ -139,9 +178,13 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
       const { data, error } = await supabase
         .from("profile_locations")
         .update({ point: geoPoint })
-        .eq("profile_id", session.user.id);
+        .eq("profile_id", activeProfileId);
+
+      if (error) {
+        console.error("Error updating location:", error);
+      }
     })();
-  }, [location]);
+  }, [location, activeProfileId]);
 
   // Interest handlers
   const addInterest = (interest: string) => {
@@ -176,6 +219,8 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         getInterestName,
         location,
         setLocation,
+        profileIds,
+        activeProfileId,
       }}
     >
       {children}

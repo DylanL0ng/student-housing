@@ -3,7 +3,7 @@ import { getDiscoveryProfiles } from "../_utils/supabase.ts";
 
 Deno.serve(async (req) => {
   try {
-    const { sourceId, filters } = await req.json();
+    const { sourceId, filters, type } = await req.json();
     if (!sourceId) {
       return new Response(
         JSON.stringify({ status: "error", response: "sourceId is required" }),
@@ -17,7 +17,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { status, response } = await getDiscoveryProfiles(sourceId, filters);
+    const { status, response } = await getDiscoveryProfiles(
+      sourceId,
+      filters,
+      type
+    );
     return new Response(JSON.stringify({ status, response }), {
       headers: {
         "Content-Type": "application/json",

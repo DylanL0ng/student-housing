@@ -162,18 +162,20 @@ export const getUserData = async (
     sourceId,
     recommender,
     mode = "flatmate",
+    filters,
   }: {
     minimal?: boolean;
     exclude?: boolean;
     sourceId?: string;
     recommender?: boolean;
-    mode?: "landlord" | "flatmate";
+    filters?: Record<string, any>;
+    mode?: "flatmate" | "accommodation";
   } = {}
 ) => {
   if (typeof userId === "string") {
     userId = [userId];
   }
-  // console.log("Fetching user data for IDs:", userId, minimal);
+  console.log("Fetching user data for IDs:", userId, minimal);
   //   if minimal is true we only return data that is needed for inital loading
   //   if minimal is false we return all data
 
@@ -199,12 +201,11 @@ export const getUserData = async (
   let userData, userError;
   if (exclude) {
     // Get user data for all users except the given user IDs
-    // console.log("Excluding user IDs:", userId);
+    console.log("Excluding user IDs:", userId);
     const { data: _userData, error: _userError } = await supabase
-      .from("profiles")
+      .from("profile_mapping")
       .select(
         `
-          full_name,
           type,
           id,
           ${getUserDataQuery}
@@ -215,11 +216,11 @@ export const getUserData = async (
     userError = _userError;
   } else {
     // Get user data for the given user IDs
+    console.log("Including user IDs:", userId, mode);
     const { data: _userData, error: _userError } = await supabase
-      .from("profiles")
+      .from("profile_mapping")
       .select(
         `
-              full_name,
               type,
               id,
               ${getUserDataQuery}
@@ -230,6 +231,8 @@ export const getUserData = async (
     userData = _userData;
     userError = _userError;
   }
+
+  console.log("User data fetched:", userData, userError);
 
   if (recommender) {
     if (GLOBAL_INTEREST_LIST.length === 0) {
@@ -269,18 +272,12 @@ export const getUserData = async (
       sourceProfile?.profile_interests.map((i) => i.interest_registry.id)
     );
 
-    // console.log("Source vector for user ID", sourceId, "is", sourceVector);
-
     userData = userData
       .map((user) => {
         const targetVector = vectorize(
           user.profile_interests.map((i) => i.interest_registry.id)
         );
-        // console.log("Target vector for user ID", user.id, "is", targetVector);
-        // console.log(
-          "Cosine similarity between source and target vectors:",
-          cosineSimilarity(sourceVector, targetVector)
-        );
+
         return {
           ...user,
           similarity:
@@ -291,8 +288,6 @@ export const getUserData = async (
       })
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, 10);
-
-    // console.log("User data sorted by similarity:", userData);
   }
 
   if (!userData || userData.length === 0) {
@@ -344,7 +339,7 @@ export const getUserData = async (
 
 export const getConnectedUserIds = async (
   userId: string,
-  mode: "landlord" | "flatmate"
+  mode: "accommodation" | "flatmate"
 ) => {
   const { data: connectionData, error: connectionError } = await supabase
     .from("connections")
@@ -388,23 +383,104 @@ const getLikedUserIds = async (userId: string) => {
   return { status: "success", response: likedUserIds };
 };
 
+export const getLocationFilteredUserIds = async (
+  filters: Record<string, any>,
+  excludeUserIds: string[] = [],
+  userType: "flatmate" | "accommodation" = "flatmate"
+): Promise<string[]> => {
+  // If we have a location filter
+  const { latitude, longitude, range } = filters.location;
+
+  const { data: locationData, error: locationError } = await supabase.rpc(
+    "get_profiles_within_distance",
+    {
+      user_type: userType,
+      exclude_ids: excludeUserIds,
+      lat: latitude,
+      lng: longitude,
+      distance_meters: range,
+    }
+  );
+
+  if (locationError) {
+    console.error("Error applying location filter:", locationError);
+  }
+
+  return locationData.map((user: { id: string }) => user.id);
+};
+
+export const getFilteredUserIds = async (
+  filters: Record<string, any>,
+  excludeUserIds: string[] = [],
+  mode: "accommodation" | "flatmate"
+) => {
+  // const locationFilteredUserIds = await getLocationFilteredUserIds(
+  //   filters,
+  //   excludeUserIds,
+  //   mode
+  // );
+
+  // filtering out age rn for testing
+  const parsedFilters = Object.entries(filters).filter(
+    ([key, value]) => key !== "location" && value !== null
+  );
+
+  let query = supabase.from("profile_information").select("profile_id");
+  parsedFilters.forEach(([key, value]) => {
+    if (key === "budget") {
+      // Range filter
+      // console.log("Range filter:", key, min, max);
+      const [min, max] = value;
+      query = query
+        .eq("key", key)
+        .gte(`value->data->value`, min)
+        .lte(`value->data->value`, max);
+      // .in("profile_id", locationFilteredUserIds);
+    }
+  });
+
+  const { data: filteredData, error: filterError } = await query;
+  if (filterError) {
+    console.error("Error applying filters:", filterError);
+    return { response: [] };
+  }
+  console.log("Filtered user IDs:", filteredData);
+  if (!filteredData || filteredData.length === 0) {
+    return { response: [] };
+  }
+
+  const filteredUserIds = filteredData.map((item) => item.profile_id);
+
+  return { response: filteredUserIds };
+};
+
 export const getDiscoveryProfiles = async (
   sourceId: string,
-  filters: Record<string, any>
+  filters: Record<string, any>,
+  search: "accommodation" | "flatmate" = "flatmate"
 ) => {
   const { response: connectedUsersIds } = await getConnectedUserIds(
     sourceId,
-    "flatmate"
+    search
   );
+
   const { response: likedUserIds } = await getLikedUserIds(sourceId);
 
-  const combinedUserIds = [...connectedUsersIds, ...likedUserIds];
+  const combinedUserIds = [...connectedUsersIds, ...likedUserIds, sourceId];
+
+  // const { response: filteredUserIds } = await getFilteredUserIds(
+  //   filters,
+  //   combinedUserIds,
+  //   search
+  // );
 
   // exclude will exclude the given ids
   const discoveryUsers = await getUserData(combinedUserIds, {
-    exclude: true,
+    // exclude: true,
     sourceId,
-    recommender: true,
+    recommender: false,
+    filters,
+    mode: search,
   });
 
   if (!discoveryUsers) {
@@ -416,7 +492,7 @@ export const getDiscoveryProfiles = async (
 
 export const getConnectedUsers = async (
   sourceId: string,
-  { minimal, mode }: { minimal: boolean; mode: "landlord" | "flatmate" }
+  { minimal, mode }: { minimal: boolean; mode: "accommodation" | "flatmate" }
 ) => {
   const { response: connectedUserIds } = await getConnectedUserIds(
     sourceId,
@@ -425,6 +501,7 @@ export const getConnectedUsers = async (
   const connectedUsers = await getUserData(connectedUserIds, {
     minimal,
     sourceId,
+    mode,
   });
 
   if (!connectedUsers) {

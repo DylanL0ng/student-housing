@@ -36,6 +36,7 @@ const ConversationMini = (profile: Profile) => {
       >
         <View style={styles.profile}>
           <Image
+            cachePolicy={"none"}
             style={styles.profileImage}
             transition={0}
             source={profile?.media[0]}

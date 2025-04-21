@@ -20,11 +20,13 @@ import { useViewMode } from "@/providers/ViewModeProvider";
 const SettingsPage = () => {
   const { viewMode, setViewMode } = useViewMode();
 
-  const [viewModeBool, setViewModeBool] = useState(viewMode === "landlord");
+  const [viewModeBool, setViewModeBool] = useState(
+    viewMode === "accommodation"
+  );
 
   const onPress = async () => {
     setViewModeBool(!viewModeBool);
-    setViewMode(!viewModeBool ? "landlord" : "flatmate");
+    setViewMode(!viewModeBool ? "accommodation" : "flatmate");
   };
 
   const checkbox = (itemLabel: string) => {

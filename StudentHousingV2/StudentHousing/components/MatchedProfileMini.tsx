@@ -19,7 +19,12 @@ const MatchedProfileMini = (profile: Profile) => {
   return (
     <TouchableOpacity onPress={openConversation} activeOpacity={0.95}>
       <View style={styles.container}>
-        <Image style={styles.inset} source={profile.media[0]} transition={0} />
+        <Image
+          cachePolicy={"none"}
+          style={styles.inset}
+          source={profile.media[0]}
+          transition={0}
+        />
         <LinearGradient
           colors={["transparent", "rgba(0,0,0,0.9)"]}
           locations={[0.3, 1.0]}

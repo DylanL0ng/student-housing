@@ -4,10 +4,13 @@ import { HeaderWithBack } from "../(filters)";
 import { useRoute } from "@react-navigation/native";
 import supabase from "@/lib/supabase";
 import { useAuth } from "@/providers/AuthProvider";
+import { useProfile } from "@/providers/ProfileProvider";
 
 const TextInputScreen = () => {
   const theme = useTheme();
   const { session } = useAuth();
+
+  const { activeProfileId } = useProfile();
 
   const route = useRoute();
   const { item } = route.params;
@@ -16,20 +19,20 @@ const TextInputScreen = () => {
 
   const { label, placeholder, data } = parsedItem.information.value;
 
-  const [inputValue, setInputValue] = useState(data);
+  const [inputValue, setInputValue] = useState(data.value);
 
   const handleInputSave = async () => {
     await supabase
       .from("profile_information")
       .upsert({
-        profile_id: session?.user.id,
+        profile_id: activeProfileId,
         key: parsedItem.information.key,
         value: {
           ...parsedItem.information.value,
           data: { value: inputValue },
         },
       })
-      .eq("profile_id", session?.user.id)
+      .eq("profile_id", activeProfileId)
       .eq("key", parsedItem.information.key)
       .eq("view", "flatmate");
   };
@@ -42,7 +45,7 @@ const TextInputScreen = () => {
           <Label>{label}</Label>
           <Input
             onChangeText={(value) => setInputValue(value)}
-            defaultValue={data}
+            defaultValue={inputValue}
             placeholder={placeholder}
           />
         </View>

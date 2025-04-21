@@ -20,6 +20,7 @@ import {
   Send as SendIcon,
 } from "@tamagui/lucide-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useProfile } from "@/providers/ProfileProvider";
 
 const Header: React.FC<{
   profile: any;
@@ -52,6 +53,7 @@ const Header: React.FC<{
       <View style={styles.userInfoContainer}>
         <TouchableOpacity onPress={gotoUserProfile}>
           <Image
+            cachePolicy={"none"}
             source={profile?.media?.[0]}
             style={styles.userImage}
             transition={0}
@@ -102,6 +104,7 @@ const TextMessage: React.FC<TextMessageProps> = ({ sender, content }) => (
 
 const MessageThread = () => {
   const { session } = useAuth();
+  const { activeProfileId } = useProfile();
   const [textInputMessage, setTextInputMessage] = useState("");
   const [messageHistory, setMessageHistory] = useState<TextMessageProps[]>([]);
 
@@ -112,7 +115,7 @@ const MessageThread = () => {
   const theme = useTheme();
 
   const getMessageHistory = async (conversation_id: string) => {
-    const userId = session!.user.id;
+    const userId = activeProfileId;
     try {
       const { data: messageData, error: messageError } = await supabase
         .from("conversation_messages")
@@ -143,7 +146,7 @@ const MessageThread = () => {
         { event: "INSERT", schema: "public", table: "conversation_messages" },
         (payload) => {
           const newMessage = payload.new as TextMessageProps;
-          const userId = session?.user.id;
+          const userId = activeProfileId;
 
           if (newMessage.sender_id !== userId) {
             setMessageHistory((prev) => [
@@ -161,9 +164,9 @@ const MessageThread = () => {
   }, [conversationId]);
 
   const sendMessage = async () => {
-    if (!session?.user.id) return;
+    if (!activeProfileId) return;
 
-    const userId = session.user.id;
+    const userId = activeProfileId;
     try {
       const { data: existingConversation, error: checkError } = await supabase
         .from("conversation_registry")

@@ -11,6 +11,8 @@ export default function InterestsScreen() {
   const navigation = useNavigation();
   const { session } = useAuth();
 
+  const { activeProfileId } = useProfile();
+
   const { setInterests, interests, globalInterests, getInterestName } =
     useProfile();
 
@@ -28,7 +30,7 @@ export default function InterestsScreen() {
 
   // Save interests and navigate back
   const saveInterests = useCallback(async () => {
-    if (!session?.user.id) {
+    if (!activeProfileId) {
       console.error("User session is not available.");
       return;
     }

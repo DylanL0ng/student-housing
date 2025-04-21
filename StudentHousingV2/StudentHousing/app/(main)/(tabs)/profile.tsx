@@ -45,6 +45,8 @@ export default function ProfileScreen() {
 
   const [profileInformation, setProfileInformation] = useState([]);
 
+  const { activeProfileId } = useProfile();
+
   useEffect(() => {
     (async () => {
       if (location) {
@@ -94,7 +96,7 @@ export default function ProfileScreen() {
       .select(`*, profile_information(*)`)
       .eq("view", viewMode)
       .eq("profile_information.view", viewMode)
-      .eq("profile_information.profile_id", session.user.id)
+      .eq("profile_information.profile_id", activeProfileId)
       .eq("editable", true);
 
     const parsedProfileInformation = data.map((item) => {
@@ -117,14 +119,13 @@ export default function ProfileScreen() {
       return 0;
     });
 
-    console.log(sortedProfileInformation);
     setProfileInformation(sortedProfileInformation);
   };
 
   const fetchProfile = async () => {
     const { data, error } = await supabase.functions.invoke("getProfile", {
       body: {
-        userId: session?.user.id,
+        userId: activeProfileId,
         mode: viewMode,
       },
     });
@@ -133,6 +134,8 @@ export default function ProfileScreen() {
       console.error("Error fetching profile:", error);
       return;
     }
+
+    console.log("Profile data:", data);
 
     // if (!data || data.length === 0) {
     // console.log("No profile found, redirecting to creation page");
@@ -152,6 +155,7 @@ export default function ProfileScreen() {
     });
 
     const sortedMedia = media.sort((a, b) => a.order - b.order);
+    console.log(sortedMedia);
     setProfileImages(sortedMedia);
     setProfile(profile);
     setInterests(profile.interests || []);
@@ -181,6 +185,7 @@ export default function ProfileScreen() {
         >
           <Tabs.List>
             <Tabs.Tab
+              // border={0}
               flex={1}
               bg={"$color2"}
               focusStyle={{
@@ -191,6 +196,7 @@ export default function ProfileScreen() {
               <Text color={"$color"}>Edit</Text>
             </Tabs.Tab>
             <Tabs.Tab
+              border={0}
               flex={1}
               bg={"$color2"}
               focusStyle={{
@@ -214,18 +220,19 @@ export default function ProfileScreen() {
             >
               <YGroup rowGap={"$1"}>
                 <YGroup.Item>
-                  <Label>Profile Images</Label>
+                  <Label fontSize={"$6"} fontWeight={"bold"}>
+                    Profile Images
+                  </Label>
                   <MediaUpload
                     images={profileImages}
                     onLoad={() => {}}
-                    onUpload={(image) => {
-                      uploadImage(session, image);
-                    }}
-                    onDelete={(image) => {
-                      deleteImage(session, image);
-                    }}
+                    onUpload={(image) => {}}
+                    onDelete={(image) => {}}
                   />
                 </YGroup.Item>
+                <Label fontSize={"$6"} fontWeight={"bold"}>
+                  Your information
+                </Label>
                 {profileInformation.map((item, index) =>
                   item ? (
                     <YGroup.Item key={index}>

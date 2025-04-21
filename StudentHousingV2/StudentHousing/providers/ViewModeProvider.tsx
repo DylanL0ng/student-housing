@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Define types for both contexts
-type ViewMode = "flatmate" | "landlord";
+type ViewMode = "flatmate" | "accommodation";
 type SearchMode = "flatmate" | "accommodation";
 
 type ViewModeContextType = {

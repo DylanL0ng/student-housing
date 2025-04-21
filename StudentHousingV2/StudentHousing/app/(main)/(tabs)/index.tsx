@@ -2,7 +2,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import ProfileCard from "@/components/ProfileCard";
 import SwipeHandler from "@/components/SwipeHandler";
 import { Profile, User } from "@/typings";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import supabase from "@/lib/supabase";
 
 import { View } from "tamagui";
@@ -10,15 +10,19 @@ import Loading from "@/components/Loading";
 import { useFocusEffect } from "expo-router";
 import { getSavedFilters } from "@/utils/filterUtils";
 import { useProfile } from "@/providers/ProfileProvider";
+import { useSearchMode } from "@/providers/ViewModeProvider";
+import generateFakeUsers from "@/scripts/generateFakeUsers";
 
 export default function HomeScreen() {
   const auth = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const { activeProfileId } = useProfile();
 
   const { interests } = useProfile();
+  const { searchMode } = useSearchMode();
   const [isLoading, setIsLoading] = useState(true);
 
-  const requestUpdate = async () => {
+  const requestUpdate = useCallback(async () => {
     try {
       setIsLoading(true);
 
@@ -27,15 +31,14 @@ export default function HomeScreen() {
         "getDiscoveryProfiles",
         {
           body: {
-            sourceId: auth.session?.user.id,
+            sourceId: activeProfileId,
             filters: filters,
+            type: searchMode,
           },
         }
       );
 
       const { response, error } = _response.data;
-
-      // console.log("Fetched profiles:", response);
 
       if (error) {
         console.error("Error fetching profiles:", error);
@@ -43,94 +46,36 @@ export default function HomeScreen() {
       }
 
       const parsedData = response.filter((profile) => profile);
-      // console.log("Parsed profiles:", parsedData);
       setProfiles(parsedData || []);
     } catch (err) {
       console.error("Unexpected error:", err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeProfileId, searchMode]);
 
   useEffect(() => {
-    // console.log("test");
+    console.log("test");
     requestUpdate();
-    //   const getUserDataQuery = `
-    //     conversation_members!user_id(
-    //       conversation_id,
-    //       user_id,
-    //       conversation_registry!conversation_id(
-    //         conversation_id,
-    //         conversation_messages!conversation_id(
-    //           content, status, sender_id, created_at, message_id
-    //         )
-    //       )
-    //     ),
-    //     profile_information!profile_id(*, profile_information_registry!key(label, priority_order)),
-    //     profile_interests!profile_id(interest_registry!id(interest)),
-    //     profile_locations!profile_id(point, city)
-    //   `;
-    //   const { data: _userData, error: _userError } = await supabase
-    //     .from("profiles")
-    //     .select(
-    //       `
-    //                 full_name,
-    //                 type,
-    //                 id,
-    //                 ${getUserDataQuery}
-    //                 `
-    //     )
-    //     .limit(10);
-
-    //   const parsedData = _userData?.map((profile) => {
-    //     // Filter out your own membership
-    //     const members = profile.conversation_members.filter((member) => {
-    //       return member.user_id !== auth.session?.user.id;
-    //     });
-
-    //     // Extract conversations and latest messages
-    //     const conversations = members.map((member) => {
-    //       const messages =
-    //         member.conversation_registry.conversation_messages || [];
-
-    //       // Sort messages by newest first
-    //       const sortedMessages = [...messages].sort((a, b) => {
-    //         return (
-    //           new Date(b.created_at).getTime() -
-    //           new Date(a.created_at).getTime()
-    //         );
-    //       });
-
-    //       return {
-    //         conversation_id: member.conversation_id,
-    //         messages,
-    //         latest_message: sortedMessages[0] || null,
-    //       };
-    //     });
-
-    //     return {
-    //       conversations,
-    //       full_name: profile.full_name,
-    //       id: profile.id,
-    //       type: profile.type,
-    //       interests: profile.profile_interests,
-    //       location: profile.profile_locations,
-    //       information: profile.profile_information,
-    //     };
-    //   });
-
-    //   // console.log(parsedData);
-    // })();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      requestUpdate();
+    }, [requestUpdate])
+  );
+
   useEffect(() => {
-    // console.log("Interests changed:", interests);
     requestUpdate();
-  }, [interests]);
+  }, [interests, requestUpdate]);
+
+  useEffect(() => {
+    requestUpdate();
+  }, [searchMode, requestUpdate]);
 
   const handleSwipeRight = async ({ index }: { index: number }) => {
     const target = profiles[index];
-    if (!auth.session?.user.id) {
+    if (!activeProfileId) {
       console.error("User not authenticated.");
       return;
     }
@@ -141,7 +86,7 @@ export default function HomeScreen() {
         {
           body: {
             targetId: target.id,
-            sourceId: auth.session?.user.id,
+            sourceId: activeProfileId,
             type: "like",
           },
         }
@@ -164,7 +109,7 @@ export default function HomeScreen() {
     data: { profile: Profile; id: string };
   }) => {
     const target = profiles[index];
-    if (!auth.session?.user.id) {
+    if (!activeProfileId) {
       console.error("User not authenticated.");
       return;
     }
@@ -175,7 +120,7 @@ export default function HomeScreen() {
         {
           body: {
             targetId: target.id,
-            sourceId: auth.session?.user.id,
+            sourceId: activeProfileId,
             type: "dislike",
           },
         }
