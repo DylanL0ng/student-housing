@@ -8,7 +8,6 @@ import { useProfile } from "@/providers/ProfileProvider";
 
 const TextInputScreen = () => {
   const theme = useTheme();
-  const { session } = useAuth();
 
   const { activeProfileId } = useProfile();
 

@@ -3,20 +3,10 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { CreationDateProps } from "@/typings";
 import { Button, Text, View } from "tamagui";
+import { calculateAge } from "@/utils/utils";
 
 export const CreationDate = ({ value, state }: CreationDateProps) => {
   const [inputState, setInputState] = state;
-
-  const calculateAge = (date: Date) => {
-    const today = new Date();
-    let age = today.getFullYear() - date.getFullYear();
-    const monthDiff = today.getMonth() - date.getMonth();
-    const dayDiff = today.getDate() - date.getDate();
-    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-      age--;
-    }
-    return age;
-  };
 
   const [date, setDate] = useState(value || new Date());
   const [age, setAge] = useState<number | null>(

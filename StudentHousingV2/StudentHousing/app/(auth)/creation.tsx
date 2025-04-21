@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import supabase from "@/lib/supabase";
 import { useAuth } from "@/providers/AuthProvider";
 import { uploadImage } from "@/components/MediaUpload";
-import { Question, Answer, Interest, ImageObject } from "@/typings";
+import { Interest } from "@/typings";
 import { CreationInputFactory } from "@/components/Inputs/Creation";
 import { Button, Progress, Text, useTheme, View } from "tamagui";
 import Loading from "@/components/Loading";

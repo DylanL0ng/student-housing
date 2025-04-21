@@ -1,8 +1,6 @@
-import ImageCollection from "@/components/Profile/ImageCollection";
 import { Profile } from "@/typings";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useState, useMemo } from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 
@@ -170,7 +168,9 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               Age
             </Text>
-            <Text fontSize="$8">{calculateAge(item.value.data.value)}</Text>
+            <Text fontSize="$8">
+              {calculateAge(new Date(item.value.data.value))}
+            </Text>
           </View>
         );
       case "gender":
@@ -289,7 +289,7 @@ const ProfileModal = () => {
             <X size="$1" color="$color" strokeWidth={2} />
           </Button>
         </View>
-        <ScrollView marginInline="$4">
+        <ScrollView showsVerticalScrollIndicator={false} marginInline="$4">
           {interspersedContent.map((item) => renderContentItem(item))}
         </ScrollView>
       </View>

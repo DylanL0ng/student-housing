@@ -1,7 +1,7 @@
 import { useAuth } from "@/providers/AuthProvider";
 import ProfileCard from "@/components/ProfileCard";
 import SwipeHandler from "@/components/SwipeHandler";
-import { Profile, User } from "@/typings";
+import { Profile } from "@/typings";
 import { useCallback, useEffect, useState } from "react";
 import supabase from "@/lib/supabase";
 
@@ -54,16 +54,15 @@ export default function HomeScreen() {
     }
   }, [activeProfileId, searchMode]);
 
-  useEffect(() => {
-    console.log("test");
-    requestUpdate();
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       requestUpdate();
     }, [requestUpdate])
   );
+
+  useEffect(() => {
+    requestUpdate();
+  }, []);
 
   useEffect(() => {
     requestUpdate();

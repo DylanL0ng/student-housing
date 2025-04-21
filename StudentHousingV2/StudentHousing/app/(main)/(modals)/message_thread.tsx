@@ -11,7 +11,6 @@ import { Input, View, Text, useTheme, Button, ScrollView } from "tamagui";
 
 import { useLocalSearchParams } from "expo-router";
 import { User, TextMessageProps, Profile } from "@/typings";
-import { useAuth } from "@/providers/AuthProvider";
 import supabase from "@/lib/supabase";
 
 import {
@@ -66,7 +65,8 @@ const Header: React.FC<{
           <Text color={"$white8"}>Added today!</Text>
         </View>
       </View>
-      <Button
+      <></>
+      {/* <Button
         circular={true}
         bg={"$color6"}
         minW={"$2"}
@@ -76,7 +76,7 @@ const Header: React.FC<{
         style={styles.menuButton}
       >
         <EllipsisIcon />
-      </Button>
+      </Button> */}
     </View>
   );
 };
@@ -103,7 +103,6 @@ const TextMessage: React.FC<TextMessageProps> = ({ sender, content }) => (
 );
 
 const MessageThread = () => {
-  const { session } = useAuth();
   const { activeProfileId } = useProfile();
   const [textInputMessage, setTextInputMessage] = useState("");
   const [messageHistory, setMessageHistory] = useState<TextMessageProps[]>([]);
@@ -156,7 +155,7 @@ const MessageThread = () => {
           }
         }
       )
-      .subscribe((status) => {});
+      .subscribe();
 
     return () => {
       channel.unsubscribe();

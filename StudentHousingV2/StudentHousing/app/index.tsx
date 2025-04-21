@@ -7,10 +7,6 @@ import generateFakeUsers from "@/scripts/generateFakeUsers";
 const Routing = () => {
   const { session, loading } = useAuth();
 
-  // useEffect(() => {
-  //   generateFakeUsers(10);
-  // }, []);
-
   useEffect(() => {
     if (!loading) {
       router.replace("/(auth)/login");

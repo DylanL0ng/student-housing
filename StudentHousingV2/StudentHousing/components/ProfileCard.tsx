@@ -35,7 +35,7 @@ const ProfileCard = ({ profile }: ProfileCardProps) => {
 
   useEffect(() => {
     if (age) {
-      setParsedAge(calculateAge(age));
+      setParsedAge(calculateAge(new Date(age)));
     }
   }, [age]);
 

@@ -1,8 +1,3 @@
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -13,8 +8,6 @@ import Toast, { BaseToast, ErrorToast } from "react-native-toast-message";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 import supabase from "@/lib/supabase";
-
-import * as Location from "expo-location";
 
 import { defaultConfig } from "@tamagui/config/v4";
 
@@ -36,48 +29,6 @@ type Conf = typeof config;
 declare module "tamagui" {
   interface TamaguiCustomConfig extends Conf {}
 }
-
-const toastConfig = {
-  success: (props) => (
-    <BaseToast
-      {...props}
-      style={{
-        backgroundColor: "black",
-        borderLeftColor: "#4ade80", // green
-      }}
-      contentContainerStyle={{ paddingHorizontal: 15 }}
-      text1Style={{
-        color: "#ffffff",
-        fontSize: 16,
-        fontWeight: "bold",
-      }}
-      text2Style={{
-        color: "#d4d4d4",
-        fontSize: 14,
-      }}
-    />
-  ),
-  error: (props) => (
-    <ErrorToast
-      {...props}
-      style={{
-        backgroundColor: "#1e1e1e",
-        borderLeftColor: "#f87171", // red
-      }}
-      contentContainerStyle={{ paddingHorizontal: 15 }}
-      text1Style={{
-        color: "#ffffff",
-        fontSize: 16,
-        fontWeight: "bold",
-      }}
-      text2Style={{
-        color: "#d4d4d4",
-        fontSize: 14,
-      }}
-    />
-  ),
-  // You can do the same for info or custom
-};
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
@@ -129,7 +80,7 @@ export default function RootLayout() {
             </Stack>
           </ProfileProvider>
         </ModeProvider>
-        <Toast swipeable={true} config={toastConfig} topOffset={100} />
+        <Toast swipeable={true} topOffset={100} />
         <StatusBar style="auto" />
       </TamaguiProvider>
     </AuthProvider>

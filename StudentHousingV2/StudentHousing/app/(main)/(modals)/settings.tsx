@@ -49,7 +49,6 @@ const SettingsPage = () => {
               <Button
                 pressTheme
                 onPress={() => {
-                  // console.log("Pressed");
                   router.replace("/(auth)/creation");
                 }}
               >

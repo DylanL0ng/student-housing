@@ -1,36 +1,17 @@
-import { Colors } from "@/constants/Colors";
-import { router, Tabs, useNavigation, useRouter } from "expo-router";
-import {
-  Platform,
-  Pressable,
-  TouchableWithoutFeedback,
-  useColorScheme,
-} from "react-native";
-import {
-  FontAwesome,
-  FontAwesome5,
-  Ionicons,
-  MaterialCommunityIcons,
-} from "@expo/vector-icons";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import TailwindColours from "@/constants/TailwindColours";
+import { Tabs, useNavigation, useRouter } from "expo-router";
+import { Pressable } from "react-native";
+
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, View } from "@tamagui/core";
 import { useEffect, useState } from "react";
 import Header from "@/components/Header";
-import { usePathname, useRouteInfo } from "expo-router/build/hooks";
+import { usePathname } from "expo-router/build/hooks";
 import { Compass, Mail, MessageCircle, User } from "@tamagui/lucide-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRoute } from "@react-navigation/native";
 import { useViewMode } from "@/providers/ViewModeProvider";
 
 export default function TabLayout() {
   const theme = useTheme();
   const navigation = useNavigation();
-  const router = useRouter();
-  const pathname = usePathname();
 
   const { viewMode, setViewMode } = useViewMode();
 
@@ -89,7 +70,7 @@ export default function TabLayout() {
         options={{
           title: "Requests",
           tabBarIcon: ({ color }) => <Mail color={color} />,
-          href: viewMode === "landlord" ? undefined : null,
+          href: viewMode === "accommodation" ? undefined : null,
         }}
       />
       <Tabs.Screen

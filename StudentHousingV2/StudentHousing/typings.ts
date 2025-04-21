@@ -56,12 +56,12 @@ export interface Profile {
   information: [];
   media: string[];
   // has_conversation: boolean;
+  conversations: Conversation[];
   latest_message?: string;
 }
 export interface Conversation {
   latest_message?: string;
-  profile: Profile;
-  id: string;
+  conversation_id: string;
 }
 
 export interface Message {

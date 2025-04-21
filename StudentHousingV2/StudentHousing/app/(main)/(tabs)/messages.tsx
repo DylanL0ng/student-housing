@@ -5,7 +5,6 @@ import React, { useCallback, useEffect, useState, useRef } from "react";
 import { FlatList, SafeAreaView } from "react-native";
 
 import supabase from "@/lib/supabase";
-import { useAuth } from "@/providers/AuthProvider";
 import Loading from "@/components/Loading";
 
 import { H6, View } from "tamagui";
