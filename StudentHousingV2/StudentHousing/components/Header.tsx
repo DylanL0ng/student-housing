@@ -13,7 +13,7 @@ type HeaderProps = {
 
 const Header = (props: HeaderProps) => {
   const [_, cur_page] = useSegments();
-  const insets = useSafeAreaInsets(); // Get safe area insets
+  const insets = useSafeAreaInsets();
   let page = cur_page?.toString();
   const theme = useTheme();
 

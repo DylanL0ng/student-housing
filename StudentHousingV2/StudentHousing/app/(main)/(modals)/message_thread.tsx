@@ -60,12 +60,12 @@ const Header: React.FC<{
         </TouchableOpacity>
         <View>
           <Text color={"$white5"} style={styles.userName}>
-            {profile?.title}
+            {profile.information.name.value.data.value}
           </Text>
           <Text color={"$white8"}>Added today!</Text>
         </View>
       </View>
-      <></>
+      <View></View>
       {/* <Button
         circular={true}
         bg={"$color6"}
@@ -110,6 +110,7 @@ const MessageThread = () => {
   const { profile } = useLocalSearchParams<{ profile: string }>();
 
   const parsedProfile = JSON.parse(profile) as Profile;
+
   const conversationId = parsedProfile.conversations[0].conversation_id;
   const theme = useTheme();
 

@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useCallback, useEffect, useState } from "react";
 import { useTheme, View } from "tamagui";
-import { HeaderWithBack } from ".";
 import { Filter } from "@/typings";
 import { useLocalSearchParams } from "expo-router";
 import { getSavedFilters, saveFilter } from "@/utils/filterUtils";
 import { LocationPicker } from "@/components/LocationPicker"; // make sure the path is correct
+import { HeaderWithBack } from ".";
 
 const MapScreen = () => {
   const { item } = useLocalSearchParams();
@@ -49,6 +48,13 @@ const MapScreen = () => {
     }
   };
 
+  const handleLocationChange = useCallback(
+    (location) => {
+      setCurrentLocation(location);
+    },
+    [setCurrentLocation]
+  );
+
   return (
     <>
       <HeaderWithBack page={filter.label} />
@@ -62,7 +68,7 @@ const MapScreen = () => {
         {initialLocation && (
           <LocationPicker
             initialLocation={initialLocation}
-            onLocationChange={(loc) => setCurrentLocation(loc)}
+            onLocationChange={handleLocationChange}
             onSave={handleSaveFilter}
             headerText={filter.label}
             saveButtonText="Save Location"

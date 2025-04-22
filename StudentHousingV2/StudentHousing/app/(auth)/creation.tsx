@@ -4,10 +4,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
 import supabase from "@/lib/supabase";
-import { useAuth } from "@/providers/AuthProvider";
-import { uploadImage } from "@/components/MediaUpload";
 import { Interest } from "@/typings";
-import { CreationInputFactory } from "@/components/Inputs/Creation";
+import { CreationInputFactory } from "@/components/Inputs/CreationInputFactory";
 import { Button, Progress, Text, useTheme, View } from "tamagui";
 import Loading from "@/components/Loading";
 import { useProfile } from "@/providers/ProfileProvider";
@@ -42,7 +40,6 @@ export interface Answer {
 
 export interface SliderOptions {
   range: [number, number, number]; // [min, max, step]
-  value: number;
 }
 
 export interface MediaOptions {
@@ -51,12 +48,13 @@ export interface MediaOptions {
 
 export interface InputOptions {
   placeholder: string;
+  // options: {
+  // };
 }
 
-export interface DateOptions {}
-
 export interface MultiSelectOptions {
-  values: any[];
+  id: string;
+  label: string;
 }
 
 export interface ImageObject {
@@ -65,7 +63,6 @@ export interface ImageObject {
 }
 
 const CreateScreen = () => {
-  const { session } = useAuth();
   const theme = useTheme();
 
   const { activeProfileId } = useProfile();
@@ -82,7 +79,7 @@ const CreateScreen = () => {
     date: new Date(),
     media: [],
     location: [],
-    select: null,
+    select: [],
   });
 
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -102,7 +99,6 @@ const CreateScreen = () => {
       }
 
       if (!data || data.length === 0) {
-        console.log("No data returned from query");
         setLoading(false);
         return;
       }
@@ -113,7 +109,6 @@ const CreateScreen = () => {
         (a, b) => b.priority_order - a.priority_order
       );
 
-      console.log("sorted data", sortedData);
       sortedData.push({
         creation: {
           title: "Upload some images of yourself",
@@ -161,7 +156,7 @@ const CreateScreen = () => {
         setInputState((prev) => ({ ...prev, location: [] }));
         break;
       case "select":
-        setInputState((prev) => ({ ...prev, select: null }));
+        setInputState((prev) => ({ ...prev, select: [] }));
         break;
     }
   }, []);
@@ -315,21 +310,18 @@ const CreateScreen = () => {
 
       // handle location
       const location = newAnswers["location"].value;
-      console.log("handling location", location);
       if (location) {
         const geoPoint = {
           type: "Point",
           coordinates: [location.longitude, location.latitude], // [lng, lat]
         };
 
-        console.log("test 1");
         const { error: locationError } = await supabase
           .from("profile_locations")
           .upsert({
             profile_id: activeProfileId,
             point: geoPoint,
           });
-        console.log("test 2");
 
         if (locationError) {
           console.error("Error saving location:", locationError);
@@ -339,15 +331,12 @@ const CreateScreen = () => {
 
       // handle interests
       const interests = newAnswers["interests"].value;
-      console.log("handling interests", interests);
       if (interests) {
-        console.log("test 3");
         await supabase
           .from("profile_interests")
           .delete()
           .eq("profile_id", activeProfileId);
 
-        console.log("test 4");
         const { error } = await supabase.from("profile_interests").upsert(
           interests.map((interest: Interest) => ({
             profile_id: activeProfileId,
@@ -355,7 +344,6 @@ const CreateScreen = () => {
           }))
         );
 
-        console.log("test 5");
         if (error) {
           console.error("Error saving interests:", error);
           return;
@@ -386,7 +374,7 @@ const CreateScreen = () => {
     }
   };
 
-  if (loading) return <Loading title="Loading" />;
+  if (loading) return <Loading title="Saving information" />;
 
   if (!questions || questions.length === 0)
     return <Loading title="No questions found" />;
@@ -395,7 +383,7 @@ const CreateScreen = () => {
     <View bg="$background" style={{ flex: 1 }}>
       <View style={{ width: "100%", backgroundColor: "black" }}>
         <Progress value={(questionIndex / questions.length) * 100}>
-          <Progress.Indicator animation={"superBouncy"} />
+          <Progress.Indicator animation={"medium"} />
         </Progress>
       </View>
 
@@ -403,7 +391,7 @@ const CreateScreen = () => {
         <View
           style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
         >
-          <Text>Saving your profile...</Text>
+          <Loading title="Saving your profile..." />
         </View>
       ) : (
         <View paddingInline={"$2"} flex={1}>

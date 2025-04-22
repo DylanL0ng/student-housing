@@ -22,69 +22,107 @@ export default function SwipeHandler<
 >({ Card, data, onSwipeRight, onSwipeLeft, requestUpdate, style }: Props<T>) {
   const pan = useRef(new Animated.ValueXY()).current;
   const [curIndex, setCurIndex] = useState(0);
+  const isSwipingRef = useRef(false);
   const [currentData, setCurrentData] = useState(data);
   const SCREEN_WIDTH = Dimensions.get("window").width;
 
+  // Store the actual index in a ref to prevent closure issues
+  const indexRef = useRef(0);
+
   useEffect(() => {
     setCurrentData(data);
+    indexRef.current = 0;
     setCurIndex(0);
   }, [data]);
 
   useEffect(() => {
-    if (!currentData[curIndex]) requestUpdate();
-  }, [curIndex]);
+    // Call requestUpdate if we've gone past the end of the array
+    if (curIndex >= currentData.length) {
+      requestUpdate();
+    }
+  }, [curIndex, currentData, requestUpdate]);
 
   const panResponder = useRef(
     PanResponder.create({
+      onStartShouldSetPanResponder: () => !isSwipingRef.current,
+
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+        if (isSwipingRef.current) return false;
+        return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
       },
+
+      onPanResponderGrant: () => {
+        // Mark that we're starting a swipe
+        isSwipingRef.current = true;
+      },
+
       onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
         useNativeDriver: false,
       }),
+
       onPanResponderRelease: (_, gestureState) => {
         const { dx, dy } = gestureState;
-        const swipeThreshold = SCREEN_WIDTH / 2;
+        const swipeThreshold = SCREEN_WIDTH / 3;
 
         if (Math.abs(dx) > swipeThreshold) {
+          // Block additional swipes during animation
+          isSwipingRef.current = true;
+
           Animated.timing(pan, {
             toValue: { x: dx > 0 ? SCREEN_WIDTH : -SCREEN_WIDTH, y: dy },
             duration: 200,
             useNativeDriver: false,
           }).start(() => {
-            let leftSwipe = true;
+            // Create a local copy of the current index to use in callbacks
+            const currentIdx = indexRef.current;
+
+            let action = onSwipeLeft;
             if (dx > 0) {
-              leftSwipe = false;
-            } else {
-              leftSwipe = true;
+              action = onSwipeRight;
             }
 
-            setCurIndex((prevIndex) => {
-              const newIndex = prevIndex + 1;
-              const data = {
-                index: prevIndex,
-                data: currentData[curIndex],
-              };
+            // Prepare the data object to pass to the handler
+            const dataToPass = {
+              index: currentIdx,
+              data: currentData[currentIdx],
+            };
 
-              if (leftSwipe) onSwipeLeft(data);
-              else onSwipeRight(data);
+            // Update the index ref first
+            indexRef.current = currentIdx + 1;
 
-              return newIndex;
-            });
-
+            // Reset animation before state updates
             pan.setValue({ x: 0, y: 0 });
+
+            // Execute the handler
+            action(dataToPass);
+
+            // Now update the state with the new index
+            // Use setTimeout to push this to the next event cycle
+            setTimeout(() => {
+              setCurIndex(indexRef.current);
+              // Allow swiping again
+              isSwipingRef.current = false;
+            }, 0);
           });
         } else {
           Animated.spring(pan, {
             toValue: { x: 0, y: 0 },
+            friction: 5,
             useNativeDriver: false,
-          }).start();
+          }).start(() => {
+            // Allow swiping again after spring-back animation
+            isSwipingRef.current = false;
+          });
         }
       },
+
+      onPanResponderTerminationRequest: () => false,
     })
   ).current;
 
   const renderCard = (index: number) => {
+    if (!currentData[index]) return null;
+
     const currentCardStyle = {
       transform: [
         { translateX: pan.x },

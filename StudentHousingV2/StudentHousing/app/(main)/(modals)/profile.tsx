@@ -62,7 +62,7 @@ const ProfileModal = () => {
     ) as Profile;
 
     // Sort information by priority_order if it exists
-    const information = parsedProfile.information.sort(
+    const information = Object.values(parsedProfile.information || {}).sort(
       (a, b) => (a.priority_order || 0) - (b.priority_order || 0)
     );
 
@@ -130,6 +130,7 @@ const ProfileModal = () => {
   }, [profileData, profileInformation]);
 
   const RenderProfileItem = ({ item }: { item: any }) => {
+    console.log(item);
     switch (item.key) {
       case "bio":
         return (
@@ -148,7 +149,7 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               Bio
             </Text>
-            <Text fontSize="$8">{item.value.data.value}</Text>
+            <Text fontSize="$8">{}</Text>
           </View>
         );
       case "age":
@@ -190,7 +191,7 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               Gender
             </Text>
-            <Text fontSize="$8">{item.value.data.value}</Text>
+            <Text fontSize="$8">{}</Text>
           </View>
         );
       case "budget":
@@ -210,7 +211,27 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               Budget
             </Text>
-            <Text fontSize="$8">€{item.value.data.value}</Text>
+            <Text fontSize="$8">€{}</Text>
+          </View>
+        );
+      case "university":
+        return (
+          <View
+            overflow="hidden"
+            paddingBlock="$4"
+            paddingInline="$4"
+            bg="$color4"
+            display="flex"
+            gap="$2"
+            style={{
+              borderRadius: 16,
+              marginVertical: 8,
+            }}
+          >
+            <Text fontWeight="bold" fontSize="$3">
+              University
+            </Text>
+            <Text fontSize="$8">{JSON.parse(item.value.data.value.label)}</Text>
           </View>
         );
       default:
@@ -230,7 +251,7 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               {item.label || item.key}
             </Text>
-            <Text fontSize="$8">{item.value.data.value}</Text>
+            <Text fontSize="$8">{}</Text>
           </View>
         );
     }

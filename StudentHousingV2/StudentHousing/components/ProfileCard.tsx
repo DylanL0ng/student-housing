@@ -18,25 +18,22 @@ const ProfileCard = ({ profile }: ProfileCardProps) => {
   const { getInterestName } = useProfile();
   const { information, interests = [], media } = profile;
 
-  const [parsedAge, setParsedAge] = useState<number>(0);
+  const { name, age } = information;
 
-  // Parse profile information into a more usable format
-  const parsedProfileInformation = useMemo(() => {
-    return information.reduce<Record<string, string>>(
-      (acc, item: InformationItem) => {
-        acc[item.key] = item.value.data.value;
-        return acc;
-      },
-      {}
-    );
-  }, [information]);
-
-  const { name, age } = parsedProfileInformation;
-
-  useEffect(() => {
-    if (age) {
-      setParsedAge(calculateAge(new Date(age)));
+  const parsedName = useMemo(() => {
+    if (name) {
+      const nameData = name.value.data;
+      return nameData.value;
     }
+    return "";
+  }, [name]);
+
+  const parsedAge = useMemo(() => {
+    if (age) {
+      const ageData = age.value.data;
+      return calculateAge(new Date(ageData.value));
+    }
+    return 0;
   }, [age]);
 
   const handleProfilePress = () => {
@@ -61,7 +58,7 @@ const ProfileCard = ({ profile }: ProfileCardProps) => {
 
       <View style={styles.personalInfoWrapper}>
         <Text style={styles.personalInfoGreeting}>
-          {name}, {parsedAge}
+          {parsedName}, {parsedAge}
         </Text>
 
         <View style={styles.interestsContainer}>

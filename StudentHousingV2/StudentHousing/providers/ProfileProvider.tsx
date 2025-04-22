@@ -45,6 +45,8 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
     {} as Record<ProfileType, string>
   );
 
+  const [newAccount, setNewAccount] = useState(false);
+
   const { session } = useAuth();
   const { viewMode } = useViewMode();
 
@@ -74,14 +76,15 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
 
       const { data: userProfiles, error: userError } = await supabase
         .from("profile_mapping")
-        .select("id, type")
+        .select("id, type, created")
         .eq("linked_profile", session.user.id);
-
-      console.log(userProfiles);
 
       if (userError || !userProfiles || userProfiles.length === 0) {
         return console.error("Error fetching user profiles:", userError);
       }
+
+      // Check if the user has created a profile
+      const isNewAccount = userProfiles.some((profile) => !profile.created);
 
       // Convert the user profiles to object with type as key and id as value
       const profileMapping = userProfiles.reduce((acc, profile) => {
@@ -89,6 +92,7 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         return acc;
       }, {} as Record<ProfileType, string>);
 
+      setNewAccount(isNewAccount);
       setProfileIds(profileMapping);
     })();
   }, [session?.user.id]);
@@ -96,7 +100,7 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
   // Load profile data whenever the active profile changes
   useEffect(() => {
     if (!activeProfileId) return;
-
+    if (newAccount) return;
     (async () => {
       // Load user interests for the active profile
       const { data: userInterests, error: interestError } = await supabase
@@ -145,26 +149,7 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         console.warn("Invalid coordinates format:", coordinates);
       }
     })();
-  }, [activeProfileId]);
-
-  // Save interests when changed
-  useEffect(() => {
-    (async () => {
-      if (!activeProfileId) return;
-
-      await supabase
-        .from("profile_interests")
-        .delete()
-        .eq("profile_id", activeProfileId);
-
-      await supabase.from("profile_interests").insert(
-        interests.map((interest) => ({
-          profile_id: activeProfileId,
-          interest_id: interest,
-        }))
-      );
-    })();
-  }, [interests, activeProfileId]);
+  }, [activeProfileId, newAccount]);
 
   // Save location when changed
   useEffect(() => {
@@ -186,17 +171,36 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
     })();
   }, [location, activeProfileId]);
 
+  const saveInterests = async (_interests: string[]) => {
+    await supabase
+      .from("profile_interests")
+      .delete()
+      .eq("profile_id", activeProfileId);
+
+    await supabase.from("profile_interests").insert(
+      _interests.map((interest) => ({
+        profile_id: activeProfileId,
+        interest_id: interest,
+      }))
+    );
+  };
+
   // Interest handlers
   const addInterest = (interest: string) => {
-    _setInterests((prev) => [...prev, interest]);
+    const newInterests = [...interests, interest];
+    _setInterests(newInterests);
+    saveInterests(newInterests);
   };
 
   const removeInterest = (interest: string) => {
-    _setInterests((prev) => prev.filter((i) => i !== interest));
+    const newInterests = interests.filter((i) => i !== interest);
+    _setInterests(newInterests);
+    saveInterests(newInterests);
   };
 
   const setInterests = (interestList: string[]) => {
     _setInterests(interestList);
+    saveInterests(interestList);
   };
 
   const getInterestName = (id: string) => {

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { View, Text, Button, Slider, useTheme } from "tamagui";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { View, Text, Button, Slider, useTheme, debounce } from "tamagui";
 import MapView, { Circle, Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { Alert } from "react-native";
@@ -39,12 +39,15 @@ export const LocationPicker = ({
 
   const [radius, setRadius] = useState(initialLocation?.range ?? 1000);
 
-  const handleRegionChange = (region) => {
-    setCenter({
-      latitude: region.latitude,
-      longitude: region.longitude,
-    });
-  };
+  const handleRegionChange = useCallback(
+    debounce((region) => {
+      setCenter({
+        latitude: region.latitude,
+        longitude: region.longitude,
+      });
+    }, 7),
+    []
+  );
 
   const getCurrentLocation = async () => {
     try {
@@ -77,12 +80,6 @@ export const LocationPicker = ({
     }
   };
 
-  useEffect(() => {
-    if (onLocationChange) {
-      onLocationChange({ ...center, range: radius });
-    }
-  }, [center, radius]);
-
   return (
     <View gap="$4">
       <Text fontSize={"$6"} fontWeight="bold">
@@ -105,6 +102,13 @@ export const LocationPicker = ({
             longitudeDelta: 0.0421,
           }}
           onRegionChange={handleRegionChange}
+          onTouchEnd={() => {
+            onLocationChange?.({
+              latitude: center.latitude,
+              longitude: center.longitude,
+              range: radius,
+            });
+          }}
         >
           {initialLocation?.range ? (
             <Circle

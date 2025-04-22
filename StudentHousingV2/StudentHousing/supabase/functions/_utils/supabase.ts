@@ -124,6 +124,7 @@ const constructProfile = (
     return null;
   }
   const data: Partial<Profile> = {};
+
   if (minimal) {
     data["conversations"] = userData.conversations;
   } else {
@@ -136,15 +137,30 @@ const constructProfile = (
       point: userData.profile_locations.point,
       distance: userData.profile_locations.distance,
     };
-    data["information"] = userData.profile_information.map((item) => {
-      return {
-        key: item.key,
-        value: item.value,
-        label: item.profile_information_registry.label,
-        priority_order: item.profile_information_registry.priority_order,
-      };
-    });
   }
+
+  // data["information"] = userData.profile_information.map((item) => {
+  //   return {
+  //     key: item.key,
+  //     value: item.value,
+  //     label: item.profile_information_registry.label,
+  //     priority_order: item.profile_information_registry.priority_order,
+  //   };
+  // });
+
+  data["information"] = userData.profile_information.reduce(
+    (acc: any, item: any) => {
+      acc[item.key] = {
+        value: item.value,
+        label: item.profile_information_registry?.label || "",
+        priority_order:
+          item.profile_information_registry?.priority_order || null,
+      };
+      return acc;
+    },
+    {} // Initial accumulator as empty object
+  );
+
   return {
     id: userData.id,
     title: userData.full_name,
@@ -190,7 +206,8 @@ export const getUserData = async (
             content, status, sender_id, created_at, message_id
           )
         )
-      )
+      ),
+      profile_information!profile_id(*, profile_information_registry!key(label, priority_order))
     `
     : `
       profile_information!profile_id(*, profile_information_registry!key(label, priority_order)),
@@ -211,7 +228,8 @@ export const getUserData = async (
           ${getUserDataQuery}
           `
       )
-      .filter("id", "not.in", `(${userId.join(",")})`);
+      .filter("id", "not.in", `(${userId.join(",")})`)
+      .filter("type", "eq", mode);
     userData = _userData;
     userError = _userError;
   } else {
@@ -369,8 +387,8 @@ const getLikedUserIds = async (userId: string) => {
   const { data: likeData, error: likeError } = await supabase
     .from("profile_interactions")
     .select("cohert2")
-    .eq("cohert1", userId)
-    .eq("type", "like");
+    .eq("cohert1", userId);
+  // .eq("type", "like")
   if (likeError) {
     return { status: "error", response: likeError };
   }
@@ -459,6 +477,8 @@ export const getDiscoveryProfiles = async (
   filters: Record<string, any>,
   search: "accommodation" | "flatmate" = "flatmate"
 ) => {
+  console.log("search mode");
+
   const { response: connectedUsersIds } = await getConnectedUserIds(
     sourceId,
     search
@@ -476,7 +496,7 @@ export const getDiscoveryProfiles = async (
 
   // exclude will exclude the given ids
   const discoveryUsers = await getUserData(combinedUserIds, {
-    // exclude: true,
+    exclude: true,
     sourceId,
     recommender: false,
     filters,
@@ -515,6 +535,7 @@ export const likeUser = async (targetId: string, sourceId: string) => {
   if (targetId === sourceId)
     return { status: "error", response: "Invalid user" };
 
+  console.log("Like user:", targetId, sourceId);
   const { data, error } = await supabase
     .from("profile_interactions")
     .select("type")

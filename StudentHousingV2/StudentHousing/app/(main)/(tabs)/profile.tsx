@@ -39,7 +39,13 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
   const [profileImages, setProfileImages] = useState<ImageObject[]>([]);
 
-  const { setInterests, interests, getInterestName, location } = useProfile();
+  const {
+    setInterests,
+    interests,
+    globalInterests,
+    getInterestName,
+    location,
+  } = useProfile();
   const [labeledInterests, setLabeledInterests] = useState<string[]>([]);
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
 
@@ -64,63 +70,63 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
-      fetchProfileInformation();
+      // fetchProfileInformation();
     }, [viewMode])
   );
 
   useEffect(() => {
     setInterests(interests || []);
-    setLabeledInterests(interests.map((interest) => getInterestName(interest)));
   }, [interests]);
 
   const formatProfileInformation = (item) => {
     if (item.type === "interests") {
       return interests.map((interest) => getInterestName(interest)).join(", ");
     }
-
     switch (item.input_type) {
       case "text":
         return item.profile_information[0]?.value?.data.value;
       case "slider":
         return `€${item.profile_information[0].value.data.value}`;
       case "select":
-        return `${item.profile_information[0].value.data.value}`;
+        return `${item.profile_information[0].value.data.value?.label}`;
       case "location":
         return locationLabel;
     }
   };
 
-  const fetchProfileInformation = async () => {
-    const { data, error } = await supabase
-      .from("profile_information_registry")
-      .select(`*, profile_information(*)`)
-      .eq("view", viewMode)
-      .eq("profile_information.view", viewMode)
-      .eq("profile_information.profile_id", activeProfileId)
-      .eq("editable", true);
+  // const fetchProfileInformation = async () => {
+  //   const { data, error } = await supabase
+  //     .from("profile_information_registry")
+  //     .select(`*, profile_information(*)`)
+  //     .eq("view", viewMode)
+  //     .eq("profile_information.view", viewMode)
+  //     .eq("profile_information.profile_id", activeProfileId)
+  //     .eq("editable", true);
 
-    const parsedProfileInformation = data.map((item) => {
-      return {
-        ...item,
-        information:
-          item.profile_information && item.profile_information.length > 0
-            ? item.profile_information[0]
-            : null,
-      };
-    });
+  //   const parsedProfileInformation = data.map((item) => {
+  //     return {
+  //       ...item,
+  //       information:
+  //         item.profile_information && item.profile_information.length > 0
+  //           ? item.profile_information[0]
+  //           : null,
+  //     };
+  //   });
 
-    const sortedProfileInformation = parsedProfileInformation.sort((a, b) => {
-      if (a.priority_order > b.priority_order) {
-        return -1;
-      }
-      if (a.priority_order < b.priority_order) {
-        return 1;
-      }
-      return 0;
-    });
+  //   const sortedProfileInformation = parsedProfileInformation.sort((a, b) => {
+  //     if (a.priority_order > b.priority_order) {
+  //       return -1;
+  //     }
+  //     if (a.priority_order < b.priority_order) {
+  //       return 1;
+  //     }
+  //     return 0;
+  //   });
 
-    setProfileInformation(sortedProfileInformation);
-  };
+  //   console.log("Profile Information:", sortedProfileInformation);
+
+  //   setProfileInformation(sortedProfileInformation);
+  // };
 
   const fetchProfile = async () => {
     const { data, error } = await supabase.functions.invoke("getProfile", {
@@ -135,14 +141,13 @@ export default function ProfileScreen() {
       return;
     }
 
-    console.log("Profile data:", data);
-
     // if (!data || data.length === 0) {
     // console.log("No profile found, redirecting to creation page");
     // return router.push("/(auth)/creation");
     // }
 
     const profile = data[0] as Profile;
+    console.log(profile);
     const media = profile.media.map((url) => {
       const split = url.split("/");
       const filename = split[split.length - 1];
@@ -155,7 +160,7 @@ export default function ProfileScreen() {
     });
 
     const sortedMedia = media.sort((a, b) => a.order - b.order);
-    console.log(sortedMedia);
+
     setProfileImages(sortedMedia);
     setProfile(profile);
     setInterests(profile.interests || []);
@@ -253,8 +258,31 @@ export default function ProfileScreen() {
                           }
                           if (item.type === "interests") {
                             router.navigate({
-                              pathname: "/(main)/(profile)/interests",
+                              pathname: "/(main)/(profile)/select",
                               params: {
+                                item: JSON.stringify({
+                                  information: {
+                                    value: {
+                                      data: {
+                                        value: interests.map((i) => ({
+                                          id: i,
+                                          label: getInterestName(i),
+                                        })),
+                                      },
+                                    },
+                                    key: "interests",
+                                  },
+                                  creation: {
+                                    options: {
+                                      items: globalInterests.map((i) => {
+                                        return {
+                                          id: i,
+                                          label: getInterestName(i),
+                                        };
+                                      }),
+                                    },
+                                  },
+                                }),
                                 onReturn: "refresh",
                               },
                             });
@@ -270,16 +298,27 @@ export default function ProfileScreen() {
                             });
                             return;
                           }
-                          // if (item.input_type === "slider") {
-                          //   router.navigate({
-                          //     pathname: "/(main)/(profile)/slider",
-                          //     params: {
-                          //       item: JSON.stringify(item),
-                          //       onReturn: "refresh",
-                          //     },
-                          //   });
-                          //   return;
-                          // }
+                          if (item.input_type === "slider") {
+                            router.navigate({
+                              pathname: "/(main)/(profile)/slider",
+                              params: {
+                                item: JSON.stringify(item),
+                                onReturn: "refresh",
+                              },
+                            });
+                            return;
+                          }
+
+                          if (item.input_type === "select") {
+                            router.navigate({
+                              pathname: "/(main)/(profile)/select",
+                              params: {
+                                item: JSON.stringify(item),
+                                onReturn: "refresh",
+                              },
+                            });
+                            return;
+                          }
                         }}
                       />
                     </YGroup.Item>

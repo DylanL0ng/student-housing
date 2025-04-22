@@ -1,5 +1,4 @@
 import React, { useEffect } from "react";
-import { StyleSheet, Text, Platform } from "react-native";
 import supabase from "@/lib/supabase";
 import {
   GoogleSignin,
@@ -9,7 +8,6 @@ import {
   isNoSavedCredentialFoundResponse,
   GoogleSigninButton,
 } from "@react-native-google-signin/google-signin";
-import * as AppleAuthentication from "expo-apple-authentication";
 
 import { Button, View, H1 } from "tamagui";
 

@@ -24,7 +24,6 @@ const LocationScreen = () => {
 
   // Set initial location when user location is available
   useEffect(() => {
-    // console.log(location);
     if (location) {
       setInitialLocation({
         latitude: location.latitude,
@@ -46,7 +45,6 @@ const LocationScreen = () => {
         type: "success",
         text1: "Location saved",
       });
-      console.log("Location saved:", selectedLocation);
       //   Alert.alert("Success", "Your location has been updated.");
     } catch (error) {
       console.error("Failed to update location", error);

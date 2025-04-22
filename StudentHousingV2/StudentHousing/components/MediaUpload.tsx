@@ -16,9 +16,9 @@ export interface ImageObject {
 
 export interface MediaUploadProps {
   images: ImageObject[];
-  onUpload: (image: ImageObject) => void;
-  onDelete: (image: ImageObject) => void;
-  onLoad: () => void;
+  onUpload?: (image: ImageObject) => void;
+  onDelete?: (image: ImageObject) => void;
+  onLoad?: () => void;
 }
 
 export const uploadImage = async (profileId: string, image: ImageObject) => {
@@ -73,7 +73,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
   // Load default images on mount
   useEffect(() => {
     setImages(defaultImages);
-    onLoad();
+    if (onLoad) onLoad();
   }, [defaultImages, onLoad]);
 
   const launchImagePicker = useCallback(
@@ -95,14 +95,14 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
         const newImage = { order, uri: image.uri };
 
+        onUpload?.(newImage);
+
         setImages((prev) => {
           const filtered = prev.filter((img) => img.order !== order);
           return [...filtered, newImage];
         });
 
-        console.log("New image:", newImage, activeProfileId);
         await uploadImage(activeProfileId, newImage);
-        onUpload(newImage);
       } catch (error) {
         console.error("Image pick error:", error);
       }
@@ -138,10 +138,10 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
       prev.filter((img) => img.order !== imageToDelete.order)
     );
 
-    onDelete(imageToDelete);
-
+    deleteImage(activeProfileId, imageToDelete);
     setDeleteModalOpen(false); // Close modal after deleting
     setImageToDelete(null); // Reset image to delete
+    onDelete?.(imageToDelete); // Call onDelete callback if provided
   }, [imageToDelete, onDelete]);
 
   const handleImageDeleteReject = useCallback(() => {
@@ -149,10 +149,23 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
     setImageToDelete(null); // Reset image to delete
   }, []);
 
-  const handleImageReplaceAccept = useCallback(() => {
+  const handleImageReplaceAccept = useCallback(async () => {
     if (imageToReplace !== null) {
       launchImagePicker(imageToReplace);
     }
+
+    const image = images.find((img) => img.order === imageToReplace);
+
+    // await deleteImage(
+    //   activeProfileId,
+    //   images.find((img) => img.order === imageToReplace)
+    // );
+
+    // await uploadImage(
+    //   activeProfileId,
+    //   images.find((img) => img.order === imageToReplace)
+    // );
+
     setReplaceModalOpen(false);
     setImageToReplace(null);
   }, [imageToReplace, launchImagePicker]);

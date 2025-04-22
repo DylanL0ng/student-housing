@@ -23,6 +23,7 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   const requestUpdate = useCallback(async () => {
+    if (!activeProfileId) return;
     try {
       setIsLoading(true);
 
@@ -38,13 +39,16 @@ export default function HomeScreen() {
         }
       );
 
-      const { response, error } = _response.data;
+      if (!_response) return;
 
-      if (error) {
-        console.error("Error fetching profiles:", error);
+      if (_response.error) {
+        console.error("Error fetching profiles:", _response.error);
         return;
       }
 
+      const { response, status } = _response.data;
+
+      console.log("Response:", response);
       const parsedData = response.filter((profile) => profile);
       setProfiles(parsedData || []);
     } catch (err) {
@@ -62,13 +66,11 @@ export default function HomeScreen() {
 
   useEffect(() => {
     requestUpdate();
+    generateFakeUsers(5);
   }, []);
 
   useEffect(() => {
-    requestUpdate();
-  }, [interests, requestUpdate]);
-
-  useEffect(() => {
+    console.log("search mode changed", searchMode);
     requestUpdate();
   }, [searchMode, requestUpdate]);
 
@@ -90,6 +92,8 @@ export default function HomeScreen() {
           },
         }
       );
+
+      // console.log("Response:", _response);
 
       const { status, response } = _response.data;
 
@@ -132,8 +136,11 @@ export default function HomeScreen() {
     }
   };
 
-  if (profiles.length === 0) {
+  if (isLoading) {
     return <Loading title="Searching for profiles" />;
+  }
+  if (profiles.length === 0) {
+    return <Loading title="No profiles found" />;
   }
 
   return (

@@ -6,7 +6,6 @@ import { StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import { Text, useTheme, View } from "tamagui";
 const ConversationMini = (profile: Profile) => {
-  // console.log("conversation mini", profile);
   const conversation = profile.conversations[0];
 
   const recentMessage = conversation.latest_message;
@@ -46,7 +45,7 @@ const ConversationMini = (profile: Profile) => {
         <View paddingStart={"$2"}>
           <View flexDirection={"row"} justify={"space-between"} width={"75%"}>
             <Text color={"$color"} fontWeight={"bold"}>
-              {profile.title}
+              {profile.information.name.value.data.value}
             </Text>
             {yourTurn && (
               <View

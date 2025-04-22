@@ -36,7 +36,8 @@ export interface FilterOptions {
   values?: Record<string, { label: string }>; // For multiSelect
   range?: [number, number, number]; // [min, max, step] for slider
   returnRange?: boolean; // For slider
-  default?: number; // For slider
+  default?: number;
+  prefix: string; // For slider
 }
 
 export interface FilterState {
@@ -80,15 +81,6 @@ export interface TextMessageProps {
   sender: boolean;
   message_id?: string;
   created_at?: string;
-}
-
-export interface CreationDateProps {
-  value?: Date | undefined;
-  question: {
-    type: string;
-    options?: any;
-  };
-  state: any;
 }
 
 export interface CreationInputProps {
