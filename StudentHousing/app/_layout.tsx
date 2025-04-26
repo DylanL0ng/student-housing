@@ -1,73 +1,88 @@
-import { DarkTheme, ThemeProvider } from "@react-navigation/native";
-import "@/global.css";
-import { View } from "react-native";
-// import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
-// import { SplashScreen } from "expo-router";
-// import { StatusBar } from "expo-status-bar";
-// import { AppState, Text, View } from "react-native";
-// import { Stack } from "expo-router";
-// import { useEffect, useState } from "react";
-// // import { supabase } from "@/lib/supabase";
-// import Auth from "@/components/Auth";
-// import { Session } from "@supabase/supabase-js";
-// import Header from "@/components/ui/Header";
-// import AuthProvider from "./auth_provider";
-// import { createStore } from "redux";
-// import rootReducer from "./store/reducer";
-// import { Provider } from "react-redux";
+import { useFonts } from "expo-font";
+import { router, Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useState } from "react";
+import "react-native-get-random-values";
+import Toast, { BaseToast, ErrorToast } from "react-native-toast-message";
 
-// SplashScreen.preventAutoHideAsync();
+import { useColorScheme } from "@/hooks/useColorScheme";
+import supabase from "@/lib/supabase";
+
+import { defaultConfig } from "@tamagui/config/v4";
+
+import { AuthProvider, useAuth } from "@/providers/AuthProvider";
+import { Session } from "@supabase/supabase-js";
+import { createTamagui, TamaguiProvider, Text, useTheme } from "tamagui";
+import { ModeProvider } from "@/providers/ViewModeProvider";
+import { ProfileProvider } from "@/providers/ProfileProvider";
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
+
+// you usually export this from a tamagui.config.ts file
+const config = createTamagui(defaultConfig);
+
+type Conf = typeof config;
+
+// make imports typed
+declare module "tamagui" {
+  interface TamaguiCustomConfig extends Conf {}
+}
 
 export default function RootLayout() {
-  // const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const colorScheme = useColorScheme();
+  const [loaded] = useFonts({
+    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+  });
 
-  // const store = createStore(rootReducer);
+  useEffect(() => {
+    const fetchSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      return data.session;
+    };
 
-  // useEffect(() => {
-  //   supabase.auth.getSession().then(({ data: { session } }) => {
-  //     setSession(session);
-  //   });
+    fetchSession();
 
-  //   supabase.auth.onAuthStateChange((_event, session) => {
-  //     setSession(session);
-  //   });
-  // }, []);
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!session) {
+          setSession(null);
+        } else setSession(session);
+      }
+    );
 
-  // {
-  /* <GluestackUIProvider mode="light">
-      {true ? (
-        // <AuthProvider>
-        // <
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
-        <Provider store={store}>
-          <Stack
-            screenOptions={{
-              header: ({ route, options }) => {
-                return <Header page={options.title || route.name} />;
-              },
-            }}
-          >
-            <Stack.Screen
-              name="(tabs)"
-              options={{
-                headerShown: true,
-              }}
-            />
-            <Stack.Screen name="+not-found" />
-            <Stack.Screen
-              name="message_thread"
-              options={{
-                presentation: "modal",
-              }}
-            />
-          </Stack>
-        </Provider>
-      ) : (
-        // </AuthProvider>
-        <Auth />
-      )}
-    </GluestackUIProvider> */
-  // }
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
 
-  return <View></View>;
+  if (!loaded) {
+    return <></>;
+  }
+
+  return (
+    <AuthProvider>
+      <TamaguiProvider config={config} defaultTheme="dark">
+        <ModeProvider>
+          <ProfileProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(main)" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+          </ProfileProvider>
+        </ModeProvider>
+        <Toast swipeable={true} topOffset={100} />
+        <StatusBar style="auto" />
+      </TamaguiProvider>
+    </AuthProvider>
+  );
 }

@@ -9,14 +9,20 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.C21331063.StudentHousing",
+      "usesAppleSignIn": true,
+      "config": {
+        "googleMapsApiKey":  "process.env.EXPO_PUBLIC_GOOGLE_IOS_MAP_API_KEY"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.StudentHousing"
+      "package": "com.C21331063.StudentHousing",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
@@ -25,6 +31,14 @@
     },
     "plugins": [
       "expo-router",
+      "expo-secure-store",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.75825537164-6n9kre04pgoo5fmvk65dk4pft541kd3l"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -33,8 +47,7 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ],
-      "@react-native-google-signin/google-signin"
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -46,6 +59,7 @@
       "eas": {
         "projectId": "62ded33b-f5b5-43b1-a4af-b92386105dc7"
       }
-    }
+    },
+    "owner": "opod"
   }
 }
