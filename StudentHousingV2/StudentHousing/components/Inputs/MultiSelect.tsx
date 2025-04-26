@@ -20,7 +20,12 @@ export const MultiSelect = ({
   onChange,
   singleSelect = false,
 }: MultiSelectProps) => {
-  console.log(options, value, singleSelect);
+  const [optionsState, setOptionsState] = useState<Option[]>(options);
+
+  useEffect(() => {
+    console.log("Options updated:", options);
+    setOptionsState(options);
+  }, [options]);
   const handleSelect = useCallback(
     (id: string) => {
       let newSelection: string[];
@@ -30,12 +35,9 @@ export const MultiSelect = ({
         newSelection = value.includes(id) ? [] : [id];
       } else {
         // Multi-select behavior - add/remove the item
-        console.log("value", value);
         newSelection = value.includes(id)
           ? value.filter((i) => i !== id)
           : [...value, id];
-
-        console.log("newSelection", newSelection);
       }
 
       onChange(newSelection);
@@ -56,15 +58,16 @@ export const MultiSelect = ({
       showsVerticalScrollIndicator={false}
       nestedScrollEnabled={true}
     >
-      {options.map((option) => (
-        <Button
-          key={option.id}
-          onPress={() => handleSelect(option.id)}
-          variant={value.includes(option.id) ? undefined : "outlined"}
-        >
-          {option.label}
-        </Button>
-      ))}
+      {optionsState &&
+        optionsState.map((option) => (
+          <Button
+            key={option.id}
+            onPress={() => handleSelect(option.id)}
+            variant={value.includes(option.id) ? undefined : "outlined"}
+          >
+            {option.label}
+          </Button>
+        ))}
     </ScrollView>
   );
 };

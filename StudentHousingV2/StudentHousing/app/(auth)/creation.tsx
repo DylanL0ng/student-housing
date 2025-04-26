@@ -9,6 +9,7 @@ import { CreationInputFactory } from "@/components/Inputs/CreationInputFactory";
 import { Button, Progress, Text, useTheme, View } from "tamagui";
 import Loading from "@/components/Loading";
 import { useProfile } from "@/providers/ProfileProvider";
+import { useViewMode } from "@/providers/ViewModeProvider";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -66,6 +67,7 @@ const CreateScreen = () => {
   const theme = useTheme();
 
   const { activeProfileId } = useProfile();
+  const { viewMode } = useViewMode();
 
   const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -90,7 +92,8 @@ const CreateScreen = () => {
     (async () => {
       const { data, error } = await supabase
         .from("profile_information_registry")
-        .select("creation, priority_order, input_type, type");
+        .select("creation, priority_order, input_type, type")
+        .or(`view.eq.${viewMode}, view.eq.shared`);
 
       if (error) {
         console.error("Error fetching data:", error);
@@ -104,6 +107,7 @@ const CreateScreen = () => {
       }
 
       const filteredData = data.filter((item) => item && item.creation);
+      console.log("Fetched data:", filteredData);
 
       const sortedData = filteredData.sort(
         (a, b) => b.priority_order - a.priority_order
@@ -122,6 +126,7 @@ const CreateScreen = () => {
       const parsedData = sortedData.map((item) => ({
         title: item.creation.title,
         description: item.creation.description,
+        registry: item.creation.registry,
         type: item.input_type,
         key: item.type,
         options: item.creation.options,
@@ -297,19 +302,33 @@ const CreateScreen = () => {
         }
       );
 
+      console.log(
+        "answers",
+        parsedAnswers.map(([key, value]) => {
+          return {
+            profile_id: activeProfileId,
+            value: processAnswer(key, value),
+            key,
+            view: viewMode,
+          };
+        })
+      );
       const { data, error } = await supabase.from("profile_information").upsert(
         parsedAnswers.map(([key, value]) => {
           return {
             profile_id: activeProfileId,
             value: processAnswer(key, value),
             key,
-            view: "flatmate",
+            view: viewMode,
           };
         })
       );
 
+      // console.log(data, error);
+
+      console.log("1");
       // handle location
-      const location = newAnswers["location"].value;
+      const location = newAnswers["location"]?.value;
       if (location) {
         const geoPoint = {
           type: "Point",
@@ -329,8 +348,9 @@ const CreateScreen = () => {
         }
       }
 
+      console.log("2");
       // handle interests
-      const interests = newAnswers["interests"].value;
+      const interests = newAnswers["interests"]?.value;
       if (interests) {
         await supabase
           .from("profile_interests")
@@ -355,6 +375,7 @@ const CreateScreen = () => {
         return;
       }
 
+      console.log("3");
       const { error: createdError } = await supabase
         .from("profile_mapping")
         .update({
@@ -367,6 +388,7 @@ const CreateScreen = () => {
         return;
       }
 
+      console.log("4");
       setLoading(false);
       router.replace("/(main)/(tabs)");
     } else {

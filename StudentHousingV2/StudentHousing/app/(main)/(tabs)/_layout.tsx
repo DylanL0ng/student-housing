@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, View } from "@tamagui/core";
 import { useEffect, useState } from "react";
 import Header from "@/components/Header";
-// import { usePathname } from "expo-router/build/hooks";
+import { usePathname } from "expo-router/build/hooks";
 import { Compass, Mail, MessageCircle, User } from "@tamagui/lucide-icons";
 import { useViewMode } from "@/providers/ViewModeProvider";
 
@@ -14,16 +14,17 @@ export default function TabLayout() {
   const navigation = useNavigation();
 
   const { viewMode, setViewMode } = useViewMode();
+  const router = useRouter();
+  const pathname = usePathname();
 
   // useEffect(() => {
-  //   console.log(viewMode);
-  //   // if landlord mode is true and we are on discovery page redirect to requests
-  //   // if landlord mode is false and we are on requests page redirect to discovery
-  //   // if (viewMode === "landlord" && pathname.includes("/"))
-  //   //   return router.replace("/(main)/(tabs)/requests");
-  //   // if (viewMode === "flatmate" && pathname.includes("/requests"))
-  //   //   return router.replace("/(main)/(tabs)");
-  // }, [viewMode]);
+  //   if (viewMode === "accommodation" && pathname === "/") {
+  //     return router.replace("/(main)/(tabs)/requests");
+  //   }
+  //   if (viewMode === "flatmate" && pathname === "/requests") {
+  //     return router.replace("/");
+  //   }
+  // }, [viewMode, pathname]);
 
   const insets = useSafeAreaInsets();
 
@@ -35,7 +36,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      screenOptions={{
+      screenOptions={({ route }) => ({
         tabBarStyle: {
           borderTopWidth: 0,
           height: insets.bottom + 40,
@@ -53,9 +54,9 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           color: theme.color02.val,
         },
-        tabBarActiveTintColor: theme.white1.val,
+        tabBarActiveTintColor: theme.color.val,
         headerShown: false,
-      }}
+      })}
     >
       <Tabs.Screen
         name="index"

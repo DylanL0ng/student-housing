@@ -1,57 +1,187 @@
 import React, { useCallback, useEffect, useState } from "react";
 import supabase from "@/lib/supabase";
 import { router, useFocusEffect, useNavigation } from "expo-router";
-
 import { useTheme, View } from "@tamagui/core";
-
 import ProfileCard from "@/components/ProfileCard";
 import { Profile } from "@/typings";
 import { useAuth } from "@/providers/AuthProvider";
 import Loading from "@/components/Loading";
 import { Label, ListItem, ScrollView, Tabs, Text, YGroup } from "tamagui";
-import MediaUpload, {
-  deleteImage,
-  ImageObject,
-  uploadImage,
-} from "@/components/MediaUpload";
+import MediaUpload from "@/components/MediaUpload";
 import { useViewMode } from "@/providers/ViewModeProvider";
 import { ChevronRight } from "@tamagui/lucide-icons";
 import { useProfile } from "@/providers/ProfileProvider";
 import { getCityFromCoordinates } from "../(filters)";
+
+// Profile item type handlers
+const profileItemHandlers = {
+  // Handler for interests type items
+  interests: {
+    getFormattedValue: (item, { interests, getInterestName }) => {
+      return interests.map((interest) => getInterestName(interest)).join(", ");
+    },
+    handleNavigation: (
+      item,
+      { interests, globalInterests, getInterestName }
+    ) => {
+      router.navigate({
+        pathname: "/(main)/(profile)/select",
+        params: {
+          item: JSON.stringify({
+            value: {
+              data: {
+                value: interests.map((i) => ({
+                  id: i,
+                  label: getInterestName(i),
+                })),
+              },
+            },
+            type: "interests",
+            creation: {
+              options: {
+                values: globalInterests.map((i) => ({
+                  id: i,
+                  label: getInterestName(i),
+                })),
+              },
+            },
+          }),
+          onReturn: "refresh",
+        },
+      });
+    },
+  },
+
+  // Handler for amenities type items
+  amenities: {
+    getFormattedValue: (item, { amenities, getAmenityName }) => {
+      return amenities.map((amenity) => getAmenityName(amenity)).join(", ");
+    },
+    handleNavigation: (
+      item,
+      { amenities, globalAmenities, getAmenityName }
+    ) => {
+      router.navigate({
+        pathname: "/(main)/(profile)/select",
+        params: {
+          item: JSON.stringify({
+            value: {
+              data: {
+                value: amenities.map((a) => ({
+                  id: a,
+                  label: getAmenityName(a),
+                })),
+              },
+            },
+            type: "amenities",
+            creation: {
+              options: {
+                values: globalAmenities.map((a) => ({
+                  id: a,
+                  label: getAmenityName(a),
+                })),
+              },
+            },
+          }),
+          onReturn: "refresh",
+        },
+      });
+    },
+  },
+
+  // Handler for location type items
+  location: {
+    getFormattedValue: (item, { locationLabel }) => {
+      return locationLabel;
+    },
+    handleNavigation: () => {
+      router.navigate({
+        pathname: "/(main)/(profile)/location",
+        params: {
+          onReturn: "refresh",
+        },
+      });
+    },
+  },
+};
+
+// Input type handlers
+const inputTypeHandlers = {
+  text: {
+    getFormattedValue: (item) => item.value.data.value,
+    handleNavigation: (item) => {
+      router.navigate({
+        pathname: "/(main)/(profile)/text-input",
+        params: {
+          item: JSON.stringify(item),
+          onReturn: "refresh",
+        },
+      });
+    },
+  },
+  slider: {
+    getFormattedValue: (item) => `€${item.value.data.value}`,
+    handleNavigation: (item) => {
+      router.navigate({
+        pathname: "/(main)/(profile)/slider",
+        params: {
+          item: JSON.stringify(item),
+          onReturn: "refresh",
+        },
+      });
+    },
+  },
+  select: {
+    getFormattedValue: (item) => `${item.value.data.value.label}`,
+    handleNavigation: (item) => {
+      router.navigate({
+        pathname: "/(main)/(profile)/select",
+        params: {
+          item: JSON.stringify(item),
+          onReturn: "refresh",
+        },
+      });
+    },
+  },
+};
 
 export default function ProfileScreen() {
   const { session } = useAuth();
 
   if (!session) return <></>;
 
-  const navigation = useNavigation();
-  useEffect(() => {
-    navigation.setOptions({
-      header: () => <></>,
-    });
-  }, [navigation]);
-
-  const theme = useTheme();
-
   const [loading, setLoading] = useState(true);
-
   const [tabMode, setTabMode] = useState<"edit" | "preview">("edit");
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
   const [profileImages, setProfileImages] = useState<ImageObject[]>([]);
+  const [profileInformation, setProfileInformation] = useState<any[]>([]);
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
 
   const {
     setInterests,
     interests,
     globalInterests,
     getInterestName,
+    setAmenities,
+    amenities,
+    globalAmenities,
+    getAmenityName,
     location,
+    activeProfileId,
   } = useProfile();
-  const [labeledInterests, setLabeledInterests] = useState<string[]>([]);
-  const [locationLabel, setLocationLabel] = useState<string | null>(null);
 
-  const [profileInformation, setProfileInformation] = useState([]);
+  const { viewMode } = useViewMode();
 
-  const { activeProfileId } = useProfile();
+  // Create context object with all needed properties for handlers
+  const profileContext = {
+    interests,
+    globalInterests,
+    getInterestName,
+    amenities,
+    globalAmenities,
+    getAmenityName,
+    locationLabel,
+  };
 
   useEffect(() => {
     (async () => {
@@ -65,68 +195,44 @@ export default function ProfileScreen() {
     })();
   }, [location]);
 
-  const { viewMode } = useViewMode();
-
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
-      // fetchProfileInformation();
     }, [viewMode])
   );
 
-  useEffect(() => {
-    setInterests(interests || []);
-  }, [interests]);
-
   const formatProfileInformation = (item) => {
-    if (item.type === "interests") {
-      return interests.map((interest) => getInterestName(interest)).join(", ");
+    // First check if it's a special profile type
+    if (profileItemHandlers[item.type]) {
+      return profileItemHandlers[item.type].getFormattedValue(
+        item,
+        profileContext
+      );
     }
-    switch (item.input_type) {
-      case "text":
-        return item.profile_information[0]?.value?.data.value;
-      case "slider":
-        return `€${item.profile_information[0].value.data.value}`;
-      case "select":
-        return `${item.profile_information[0].value.data.value?.label}`;
-      case "location":
-        return locationLabel;
+
+    // Otherwise handle by input type
+    if (inputTypeHandlers[item.input_type]) {
+      return inputTypeHandlers[item.input_type].getFormattedValue(item);
     }
+
+    return "Unknown format";
   };
 
-  // const fetchProfileInformation = async () => {
-  //   const { data, error } = await supabase
-  //     .from("profile_information_registry")
-  //     .select(`*, profile_information(*)`)
-  //     .eq("view", viewMode)
-  //     .eq("profile_information.view", viewMode)
-  //     .eq("profile_information.profile_id", activeProfileId)
-  //     .eq("editable", true);
+  const handleItemPress = (item) => {
+    // Handle by special type first
+    if (profileItemHandlers[item.type]) {
+      profileItemHandlers[item.type].handleNavigation(item, profileContext);
+      return;
+    }
 
-  //   const parsedProfileInformation = data.map((item) => {
-  //     return {
-  //       ...item,
-  //       information:
-  //         item.profile_information && item.profile_information.length > 0
-  //           ? item.profile_information[0]
-  //           : null,
-  //     };
-  //   });
+    // Otherwise handle by input type
+    if (inputTypeHandlers[item.input_type]) {
+      inputTypeHandlers[item.input_type].handleNavigation(item);
+      return;
+    }
 
-  //   const sortedProfileInformation = parsedProfileInformation.sort((a, b) => {
-  //     if (a.priority_order > b.priority_order) {
-  //       return -1;
-  //     }
-  //     if (a.priority_order < b.priority_order) {
-  //       return 1;
-  //     }
-  //     return 0;
-  //   });
-
-  //   console.log("Profile Information:", sortedProfileInformation);
-
-  //   setProfileInformation(sortedProfileInformation);
-  // };
+    console.warn("Unknown item type:", item);
+  };
 
   const fetchProfile = async () => {
     const { data, error } = await supabase.functions.invoke("getProfile", {
@@ -136,18 +242,17 @@ export default function ProfileScreen() {
       },
     });
 
+    if (!data[0]) {
+      router.push("/(auth)/creation");
+      return;
+    }
+
     if (error) {
       console.error("Error fetching profile:", error);
       return;
     }
 
-    // if (!data || data.length === 0) {
-    // console.log("No profile found, redirecting to creation page");
-    // return router.push("/(auth)/creation");
-    // }
-
     const profile = data[0] as Profile;
-    console.log(profile);
     const media = profile.media.map((url) => {
       const split = url.split("/");
       const filename = split[split.length - 1];
@@ -163,10 +268,14 @@ export default function ProfileScreen() {
 
     setProfileImages(sortedMedia);
     setProfile(profile);
-    setInterests(profile.interests || []);
-    setLabeledInterests(
-      profile.interests.map((interest) => getInterestName(interest))
+    setProfileInformation(
+      Object.entries(profile.information).sort(
+        (a, b) => b[1].priority_order - a[1].priority_order
+      )
     );
+
+    setInterests(profile.interests || [], false);
+    setAmenities(profile?.information?.amenities?.value?.data?.value, false);
 
     setLoading(false);
   };
@@ -190,7 +299,6 @@ export default function ProfileScreen() {
         >
           <Tabs.List>
             <Tabs.Tab
-              // border={0}
               flex={1}
               bg={"$color2"}
               focusStyle={{
@@ -223,108 +331,37 @@ export default function ProfileScreen() {
               gap={"$2"}
               flex={1}
             >
-              <YGroup rowGap={"$1"}>
-                <YGroup.Item>
+              {profileInformation && (
+                <YGroup rowGap={"$1"}>
+                  <YGroup.Item>
+                    <Label fontSize={"$6"} fontWeight={"bold"}>
+                      Profile Images
+                    </Label>
+                    <MediaUpload
+                      images={profileImages}
+                      onLoad={() => {}}
+                      onUpload={(image) => {}}
+                      onDelete={(image) => {}}
+                    />
+                  </YGroup.Item>
                   <Label fontSize={"$6"} fontWeight={"bold"}>
-                    Profile Images
+                    Your information
                   </Label>
-                  <MediaUpload
-                    images={profileImages}
-                    onLoad={() => {}}
-                    onUpload={(image) => {}}
-                    onDelete={(image) => {}}
-                  />
-                </YGroup.Item>
-                <Label fontSize={"$6"} fontWeight={"bold"}>
-                  Your information
-                </Label>
-                {profileInformation.map((item, index) =>
-                  item ? (
-                    <YGroup.Item key={index}>
-                      <ListItem
-                        title={item.label}
-                        subTitle={formatProfileInformation(item)}
-                        pressTheme
-                        iconAfter={ChevronRight}
-                        onPress={() => {
-                          if (item.type === "location") {
-                            router.navigate({
-                              pathname: "/(main)/(profile)/location",
-                              params: {
-                                onReturn: "refresh",
-                              },
-                            });
-                            return;
-                          }
-                          if (item.type === "interests") {
-                            router.navigate({
-                              pathname: "/(main)/(profile)/select",
-                              params: {
-                                item: JSON.stringify({
-                                  information: {
-                                    value: {
-                                      data: {
-                                        value: interests.map((i) => ({
-                                          id: i,
-                                          label: getInterestName(i),
-                                        })),
-                                      },
-                                    },
-                                    key: "interests",
-                                  },
-                                  creation: {
-                                    options: {
-                                      items: globalInterests.map((i) => {
-                                        return {
-                                          id: i,
-                                          label: getInterestName(i),
-                                        };
-                                      }),
-                                    },
-                                  },
-                                }),
-                                onReturn: "refresh",
-                              },
-                            });
-                            return;
-                          }
-                          if (item.input_type === "text") {
-                            router.navigate({
-                              pathname: "/(main)/(profile)/text-input",
-                              params: {
-                                item: JSON.stringify(item),
-                                onReturn: "refresh",
-                              },
-                            });
-                            return;
-                          }
-                          if (item.input_type === "slider") {
-                            router.navigate({
-                              pathname: "/(main)/(profile)/slider",
-                              params: {
-                                item: JSON.stringify(item),
-                                onReturn: "refresh",
-                              },
-                            });
-                            return;
-                          }
-
-                          if (item.input_type === "select") {
-                            router.navigate({
-                              pathname: "/(main)/(profile)/select",
-                              params: {
-                                item: JSON.stringify(item),
-                                onReturn: "refresh",
-                              },
-                            });
-                            return;
-                          }
-                        }}
-                      />
-                    </YGroup.Item>
-                  ) : null
-                )}
-              </YGroup>
+                  {profileInformation.map(([key, item], index) =>
+                    item && item.editable ? (
+                      <YGroup.Item key={index}>
+                        <ListItem
+                          title={item.label}
+                          subTitle={formatProfileInformation(item)}
+                          pressTheme
+                          iconAfter={ChevronRight}
+                          onPress={() => handleItemPress(item)}
+                        />
+                      </YGroup.Item>
+                    ) : null
+                  )}
+                </YGroup>
+              )}
             </ScrollView>
           </Tabs.Content>
           <Tabs.Content flex={1} value="preview">

@@ -3,10 +3,12 @@ import { getConnectedUsers } from "../_utils/supabase.ts";
 Deno.serve(async (req) => {
   try {
     const { userId, mode } = await req.json();
+    // if !(['accommodation', 'flatmate'].find(mode))
     const matchedUsersData = await getConnectedUsers(userId, {
       minimal: true,
       mode,
     });
+
     return new Response(JSON.stringify(matchedUsersData), {
       headers: {
         "Content-Type": "application/json",

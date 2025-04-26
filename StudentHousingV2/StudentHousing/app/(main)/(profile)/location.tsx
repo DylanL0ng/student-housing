@@ -5,11 +5,13 @@ import { Alert } from "react-native";
 import { HeaderWithBack } from "../(filters)";
 import { useProfile } from "@/providers/ProfileProvider";
 import Toast from "react-native-toast-message";
+import { useNavigation } from "expo-router";
 
 const LocationScreen = () => {
   const theme = useTheme();
   const { location, setLocation } = useProfile();
 
+  const navigation = useNavigation();
   const [initialLocation, setInitialLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -41,10 +43,11 @@ const LocationScreen = () => {
         longitude: selectedLocation.longitude,
       });
 
-      Toast.show({
-        type: "success",
-        text1: "Location saved",
-      });
+      navigation.goBack();
+      // Toast.show({
+      //   type: "success",
+      //   text1: "Location saved",
+      // });
       //   Alert.alert("Success", "Your location has been updated.");
     } catch (error) {
       console.error("Failed to update location", error);

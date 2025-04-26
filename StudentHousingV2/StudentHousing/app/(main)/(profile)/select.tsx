@@ -11,7 +11,7 @@ import { useViewMode } from "@/providers/ViewModeProvider";
 export default function SelectScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { activeProfileId, setInterests } = useProfile();
+  const { activeProfileId, setInterests, setAmenities } = useProfile();
   const { viewMode } = useViewMode();
   const [loading, setLoading] = useState(false);
   const [currentSelection, setCurrentSelection] = useState<string[]>([]);
@@ -29,13 +29,14 @@ export default function SelectScreen() {
     }
   }, [route.params]);
 
-  // Derive content data from parsed item
-  const title = parsedItem?.information?.value?.title || "Select Options";
-  const key = parsedItem?.information?.key;
-  const options = parsedItem?.creation?.options?.items || [];
-  const isSingleSelect = parsedItem?.creation?.options?.singleSelect;
+  const { type, value, creation } = parsedItem;
+  console.log("parsedItem", parsedItem);
 
-  // Format options for MultiSelect component
+  const title = value?.title || "Select Options";
+
+  const options = creation?.options?.values || [];
+  const isSingleSelect = creation?.options?.singleSelect;
+
   const formattedOptions = useMemo(() => {
     return options.map((option) => ({
       id: option.id || option,
@@ -45,11 +46,12 @@ export default function SelectScreen() {
 
   // Initialize selection on mount with proper dependencies
   useEffect(() => {
-    const dataValue = parsedItem?.information?.value?.data?.value;
+    const dataValue = value?.data?.value;
     if (!dataValue) return;
 
     const initialValue = Array.isArray(dataValue) ? dataValue : [dataValue];
 
+    console.log("Initial value:", value.data.value);
     if (initialValue.length > 0) {
       setCurrentSelection(
         initialValue.map((item) => {
@@ -64,15 +66,18 @@ export default function SelectScreen() {
 
   // Handle saving selection
   const saveSelection = async () => {
-    if (!activeProfileId || !key) {
+    if (!activeProfileId || !type) {
       console.error("User session or database key not available.");
       return;
     }
 
     setLoading(true);
     try {
-      if (key === "interests") {
+      if (type === "interests") {
         setInterests(currentSelection);
+      } else if (type === "amenities") {
+        console.log(currentSelection);
+        setAmenities(currentSelection);
       } else {
         const selectedOptions = formattedOptions.filter((option) =>
           currentSelection.includes(option.id)
@@ -82,16 +87,16 @@ export default function SelectScreen() {
           .from("profile_information")
           .upsert({
             profile_id: activeProfileId,
-            key: key,
+            key: type,
             value: {
-              ...parsedItem.information.value,
+              ...value,
               data: {
                 value: isSingleSelect ? selectedOptions[0] : selectedOptions,
               },
             },
           })
           .eq("profile_id", activeProfileId)
-          .eq("key", viewMode);
+          .eq("type", viewMode);
       }
 
       navigation.goBack();

@@ -48,7 +48,6 @@ export default function HomeScreen() {
 
       const { response, status } = _response.data;
 
-      console.log("Response:", response);
       const parsedData = response.filter((profile) => profile);
       setProfiles(parsedData || []);
     } catch (err) {
@@ -70,7 +69,6 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    console.log("search mode changed", searchMode);
     requestUpdate();
   }, [searchMode, requestUpdate]);
 
@@ -92,8 +90,6 @@ export default function HomeScreen() {
           },
         }
       );
-
-      // console.log("Response:", _response);
 
       const { status, response } = _response.data;
 

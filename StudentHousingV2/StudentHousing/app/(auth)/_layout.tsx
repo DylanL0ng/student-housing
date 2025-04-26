@@ -6,9 +6,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "tamagui";
 import supabase from "@/lib/supabase";
 import generateFakeUsers from "@/scripts/generateFakeUsers";
+import { useViewMode } from "@/providers/ViewModeProvider";
 
 const RootLayout = () => {
   const { session } = useAuth();
+  const { viewMode } = useViewMode();
 
   const handleSession = async (session: Session | null) => {
     if (!session) return;
@@ -17,7 +19,7 @@ const RootLayout = () => {
       .from("profile_mapping")
       .select("created")
       .eq("linked_profile", session.user.id)
-      .eq("type", "flatmate")
+      .eq("type", viewMode)
       .single();
 
     if (error || !data) {

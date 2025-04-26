@@ -3,8 +3,7 @@ import { likeUser, dislikeUser } from "../_utils/supabase.ts";
 
 Deno.serve(async (req) => {
   try {
-    const { targetId, sourceId, type } = await req.json();
-    // console.log("Received interaction:", { targetId, sourceId, type });
+    const { targetId, sourceId, type, mode } = await req.json();
     if (!targetId) {
       return new Response(
         JSON.stringify({ status: "error", response: "User ID is required" }),
@@ -57,12 +56,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // console.log("Processing interaction:", { targetId, sourceId, type });
     let response;
     if (type === "like") {
-      response = await likeUser(targetId, sourceId);
+      response = await likeUser(targetId, sourceId, mode);
     } else if (type === "dislike") {
-      response = await dislikeUser(targetId, sourceId);
+      response = await dislikeUser(targetId, sourceId, mode);
     }
 
     return new Response(JSON.stringify(response), {

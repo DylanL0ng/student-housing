@@ -153,6 +153,10 @@ const constructProfile = (
       acc[item.key] = {
         value: item.value,
         label: item.profile_information_registry?.label || "",
+        type: item.profile_information_registry?.type,
+        input_type: item.profile_information_registry?.input_type,
+        editable: item.profile_information_registry?.editable || false,
+        creation: item.profile_information_registry?.creation,
         priority_order:
           item.profile_information_registry?.priority_order || null,
       };
@@ -160,6 +164,8 @@ const constructProfile = (
     },
     {} // Initial accumulator as empty object
   );
+
+  console.log("Constructed profile data:", data);
 
   return {
     id: userData.id,
@@ -177,7 +183,7 @@ export const getUserData = async (
     exclude,
     sourceId,
     recommender,
-    mode = "flatmate",
+    type = "flatmate",
     filters,
   }: {
     minimal?: boolean;
@@ -185,7 +191,7 @@ export const getUserData = async (
     sourceId?: string;
     recommender?: boolean;
     filters?: Record<string, any>;
-    mode?: "flatmate" | "accommodation";
+    type?: "flatmate" | "accommodation";
   } = {}
 ) => {
   if (typeof userId === "string") {
@@ -195,6 +201,7 @@ export const getUserData = async (
   //   if minimal is true we only return data that is needed for inital loading
   //   if minimal is false we return all data
 
+  // FIX: Add proper spacing and remove trailing comma at the end of the query
   const getUserDataQuery = minimal
     ? `
       conversation_members!user_id(
@@ -207,11 +214,23 @@ export const getUserData = async (
           )
         )
       ),
-      profile_information!profile_id(*, profile_information_registry!key(label, priority_order))
+      profile_information!profile_id(
+        *, 
+        profile_information_registry!key(
+          label, priority_order, type, input_type, editable, creation
+        )
+      )
     `
     : `
-      profile_information!profile_id(*, profile_information_registry!key(label, priority_order)),
-      profile_interests!profile_id(interest_registry!id(id)),
+      profile_information!profile_id(
+        *, 
+        profile_information_registry!key(
+          label, priority_order, type, input_type, editable, creation
+        )
+      ),
+      profile_interests!profile_id(
+        interest_registry!id(id)
+      ),
       profile_locations!profile_id(point)
     `;
 
@@ -226,26 +245,26 @@ export const getUserData = async (
           type,
           id,
           ${getUserDataQuery}
-          `
+        `
       )
       .filter("id", "not.in", `(${userId.join(",")})`)
-      .filter("type", "eq", mode);
+      .filter("type", "eq", type);
     userData = _userData;
     userError = _userError;
   } else {
     // Get user data for the given user IDs
-    console.log("Including user IDs:", userId, mode);
     const { data: _userData, error: _userError } = await supabase
       .from("profile_mapping")
       .select(
         `
-              type,
-              id,
-              ${getUserDataQuery}
-              `
+          type,
+          id,
+          ${getUserDataQuery}
+        `
       )
-      .filter("type", "eq", mode)
+      .filter("type", "eq", type)
       .in("id", userId);
+    console.log("getting mapping", type, userId, _userData);
     userData = _userData;
     userError = _userError;
   }
@@ -357,13 +376,20 @@ export const getUserData = async (
 
 export const getConnectedUserIds = async (
   userId: string,
-  mode: "accommodation" | "flatmate"
+  mode: "accommodation" | "flatmate" = 'flatmate',
+  type: "accommodation" | "flatmate" = "flatmate"
 ) => {
-  const { data: connectionData, error: connectionError } = await supabase
-    .from("connections")
-    .select(`cohert2, cohert1`)
-    .or(`cohert1.eq.${userId},cohert2.eq.${userId}`)
-    .eq("type", mode);
+  let query = supabase.from("connections").select(`cohert2, cohert1`);
+
+  if (mode === "accommodation") {
+    query = query.eq("cohert1", userId).eq("type", "flatmate");
+  } else {
+    query = query
+      .or(`cohert1.eq.${userId},cohert2.eq.${userId}`)
+      .eq("type", type);
+  }
+
+  const { data: connectionData, error: connectionError } = await query;
 
   if (connectionError) {
     return { status: "success", response: [] };
@@ -383,7 +409,7 @@ export const getConnectedUserIds = async (
   return { status: "success", response: connectedUserIds };
 };
 
-const getLikedUserIds = async (userId: string) => {
+export const getLikedUserIds = async (userId: string) => {
   const { data: likeData, error: likeError } = await supabase
     .from("profile_interactions")
     .select("cohert2")
@@ -477,11 +503,10 @@ export const getDiscoveryProfiles = async (
   filters: Record<string, any>,
   search: "accommodation" | "flatmate" = "flatmate"
 ) => {
-  console.log("search mode");
-
   const { response: connectedUsersIds } = await getConnectedUserIds(
     sourceId,
-    search
+    mode: 'flatmate',
+    type: search
   );
 
   const { response: likedUserIds } = await getLikedUserIds(sourceId);
@@ -500,7 +525,7 @@ export const getDiscoveryProfiles = async (
     sourceId,
     recommender: false,
     filters,
-    mode: search,
+    type: search,
   });
 
   if (!discoveryUsers) {
@@ -510,18 +535,52 @@ export const getDiscoveryProfiles = async (
   return { status: "success", response: discoveryUsers };
 };
 
+export const getHousingRequests = async (sourceId: string) => {
+  const { data, error } = await supabase
+    .from("profile_interactions")
+    .select("cohert1")
+    .eq("cohert2", sourceId)
+    .eq("type", "like");
+
+  const parsedData = data?.map((item) => item.cohert1);
+
+  const combinedUserIds = [...parsedData, sourceId];
+
+  // exclude will exclude the given ids
+  const housingRequests = await getUserData(combinedUserIds, {
+    exclude: false,
+    sourceId,
+    recommender: false,
+    type: "flatmate",
+  });
+
+  if (!housingRequests) {
+    return { status: "error", response: "No users found" };
+  }
+
+  return { status: "success", response: housingRequests };
+};
+
 export const getConnectedUsers = async (
   sourceId: string,
-  { minimal, mode }: { minimal: boolean; mode: "accommodation" | "flatmate" }
+  {
+    minimal,
+    mode,
+    type,
+  }: { minimal: boolean; mode: "accommodation" | "flatmate"; type: 'accommodation' | 'flatmate' = 'flatmate' }
 ) => {
+  console.log("Getting connected users for:", sourceId, minimal, mode);
   const { response: connectedUserIds } = await getConnectedUserIds(
     sourceId,
-    mode
+    mode,
+    type
   );
+
+  console.log("Connected user IDs:", connectedUserIds);
   const connectedUsers = await getUserData(connectedUserIds, {
     minimal,
     sourceId,
-    mode,
+    type,
   });
 
   if (!connectedUsers) {
@@ -531,7 +590,11 @@ export const getConnectedUsers = async (
   return connectedUsers;
 };
 
-export const likeUser = async (targetId: string, sourceId: string) => {
+export const likeUser = async (
+  targetId: string,
+  sourceId: string,
+  mode: "accommodation" | "flatmate"
+) => {
   if (targetId === sourceId)
     return { status: "error", response: "Invalid user" };
 
@@ -583,6 +646,7 @@ export const likeUser = async (targetId: string, sourceId: string) => {
       supabase.from("connections").insert({
         cohert1: targetId,
         cohert2: sourceId,
+        type: mode,
       }),
       supabase.from("conversation_members").insert([
         {

@@ -1,12 +1,16 @@
 import { Profile } from "@/typings";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 
 import { Text, useTheme, View, Button, ScrollView } from "tamagui";
-import { X } from "@tamagui/lucide-icons";
+import { X, Heart } from "@tamagui/lucide-icons";
 import { calculateAge } from "@/utils/utils";
+import { Animated, TouchableOpacity } from "react-native";
+import supabase from "@/lib/supabase";
+import { useProfile } from "@/providers/ProfileProvider";
+import { useViewMode } from "@/providers/ViewModeProvider";
 
 interface ProfileInformation {
   key: string;
@@ -17,10 +21,6 @@ interface ProfileInformation {
 interface ProfileInformationPromptData {
   value: string;
   prompt_id: string;
-}
-
-interface ProfileInformationPrompt extends ProfileInformation {
-  value: { data: ProfileInformationPromptData[] };
 }
 
 interface ProfileInformationGender extends ProfileInformation {
@@ -45,7 +45,11 @@ const ProfileModal = () => {
   const router = useRouter();
   const theme = useTheme();
 
-  let { profile } = useLocalSearchParams();
+  const { activeProfileId } = useProfile();
+  const { viewMode } = useViewMode();
+
+  let { profile, showLikes } = useLocalSearchParams();
+  const shouldShowLikes = showLikes === "true";
 
   const [profileData, setProfileData] = useState<Profile | undefined>(
     undefined
@@ -54,12 +58,15 @@ const ProfileModal = () => {
   const [interspersedContent, setInterspersedContent] = useState<ContentItem[]>(
     []
   );
+  const scaleAnim = useState(new Animated.Value(1))[0];
 
   useEffect(() => {
     if (!profile) return;
     const parsedProfile = JSON.parse(
       Array.isArray(profile) ? profile[0] : profile
     ) as Profile;
+
+    console.log("Parsed Profile:", parsedProfile);
 
     // Sort information by priority_order if it exists
     const information = Object.values(parsedProfile.information || {}).sort(
@@ -126,11 +133,47 @@ const ProfileModal = () => {
       mediaIndex++;
     }
 
+    console.log("contentItems", contentItems);
     setInterspersedContent(contentItems);
   }, [profileData, profileInformation]);
 
+  const sendProfileInteraction = async () => {
+    if (!profileData) return;
+
+    // Animate the like button
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 1.2,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Here you would typically send an API call to record the interaction
+    console.log(`Sending like interaction for profile: ${profileData.id}`);
+
+    const _response = await supabase.functions.invoke(
+      "sendProfileInteraction",
+      {
+        body: {
+          targetId: profileData.id,
+          sourceId: activeProfileId,
+          type: "like",
+          mode: viewMode,
+        },
+      }
+    );
+
+    const { status, response } = _response.data;
+    if (status === "success") router.back();
+  };
+
   const RenderProfileItem = ({ item }: { item: any }) => {
-    console.log(item);
     switch (item.key) {
       case "bio":
         return (
@@ -149,7 +192,7 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               Bio
             </Text>
-            <Text fontSize="$8">{}</Text>
+            <Text fontSize="$8">{item.value?.data || ""}</Text>
           </View>
         );
       case "age":
@@ -170,7 +213,9 @@ const ProfileModal = () => {
               Age
             </Text>
             <Text fontSize="$8">
-              {calculateAge(new Date(item.value.data.value))}
+              {item.value?.data?.value
+                ? calculateAge(new Date(item.value.data.value))
+                : ""}
             </Text>
           </View>
         );
@@ -191,7 +236,7 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               Gender
             </Text>
-            <Text fontSize="$8">{}</Text>
+            <Text fontSize="$8">{item.value?.data || ""}</Text>
           </View>
         );
       case "budget":
@@ -211,7 +256,7 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               Budget
             </Text>
-            <Text fontSize="$8">€{}</Text>
+            <Text fontSize="$8">€{item.value?.data || ""}</Text>
           </View>
         );
       case "university":
@@ -231,7 +276,13 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               University
             </Text>
-            <Text fontSize="$8">{JSON.parse(item.value.data.value.label)}</Text>
+            <Text fontSize="$8">
+              {item.value?.data?.value?.label
+                ? typeof item.value.data.value.label === "string"
+                  ? JSON.parse(item.value.data.value.label)
+                  : String(item.value.data.value.label)
+                : ""}
+            </Text>
           </View>
         );
       default:
@@ -251,7 +302,11 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               {item.label || item.key}
             </Text>
-            <Text fontSize="$8">{}</Text>
+            <Text fontSize="$8">
+              {typeof item.value?.data === "object"
+                ? JSON.stringify(item.value.data)
+                : item.value?.data || ""}
+            </Text>
           </View>
         );
     }
@@ -310,9 +365,47 @@ const ProfileModal = () => {
             <X size="$1" color="$color" strokeWidth={2} />
           </Button>
         </View>
-        <ScrollView showsVerticalScrollIndicator={false} marginInline="$4">
-          {interspersedContent.map((item) => renderContentItem(item))}
-        </ScrollView>
+        {
+          <ScrollView showsVerticalScrollIndicator={false} marginInline="$4">
+            {interspersedContent.map((item) => renderContentItem(item))}
+          </ScrollView>
+        }
+
+        {shouldShowLikes && (
+          <Animated.View
+            style={{
+              position: "absolute",
+              bottom: 24,
+              right: 24,
+              transform: [{ scale: scaleAnim }],
+            }}
+          >
+            <TouchableOpacity
+              onPress={sendProfileInteraction}
+              activeOpacity={0.9}
+              style={{
+                backgroundColor: theme.color3.val,
+                width: 64,
+                height: 64,
+                borderRadius: 28,
+                justifyContent: "center",
+                alignItems: "center",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+                elevation: 5,
+              }}
+            >
+              <Heart
+                size={28}
+                color={"#FF6B6B"}
+                fill={"#FF6B6B"}
+                strokeWidth={2}
+              />
+            </TouchableOpacity>
+          </Animated.View>
+        )}
       </View>
     </SafeAreaView>
   );

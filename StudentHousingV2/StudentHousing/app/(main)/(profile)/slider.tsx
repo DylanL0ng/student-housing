@@ -4,7 +4,8 @@ import { HeaderWithBack } from "../(filters)";
 import { useRoute } from "@react-navigation/native";
 import supabase from "@/lib/supabase";
 import { useProfile } from "@/providers/ProfileProvider";
-import { CreationSlider } from "@/components/Inputs/Slider";
+import { SliderInput } from "@/components/Inputs/Slider";
+import { useNavigation } from "expo-router";
 
 const SliderInputScreen = () => {
   const theme = useTheme();
@@ -16,25 +17,30 @@ const SliderInputScreen = () => {
 
   const parsedItem = JSON.parse(Array.isArray(item) ? item[0] : item);
 
-  const [min, max, step] = parsedItem.creation.options.range;
-  const { title, data } = parsedItem.information.value;
+  const { type, value, creation } = parsedItem;
+  const { title, data } = value;
+
+  const [min, max, step] = creation.options.range;
 
   const [inputValue, setInputValue] = useState(data.value);
 
+  const navigation = useNavigation();
   const handleInputSave = async () => {
     await supabase
       .from("profile_information")
       .upsert({
         profile_id: activeProfileId,
-        key: parsedItem.information.key,
+        key: type,
         value: {
-          ...parsedItem.information.value,
+          ...value,
           data: { value: inputValue },
         },
       })
       .eq("profile_id", activeProfileId)
-      .eq("key", parsedItem.information.key)
+      .eq("key", type)
       .eq("view", "flatmate");
+
+    navigation.goBack();
   };
 
   return (
@@ -43,7 +49,7 @@ const SliderInputScreen = () => {
       <View flex={1} gap="$4" bg="$background" paddingInline="$4">
         <View>
           <Label color={"$color"}>{title}</Label>
-          <CreationSlider
+          <SliderInput
             min={min}
             max={max}
             step={step}

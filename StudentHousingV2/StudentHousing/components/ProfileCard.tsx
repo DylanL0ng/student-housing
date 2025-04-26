@@ -3,12 +3,48 @@ import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { View } from "tamagui";
 import { router } from "expo-router";
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
 
 import ImageCollection from "./Profile/ImageCollection";
 import { useProfile } from "@/providers/ProfileProvider";
 import { Profile, InformationItem } from "@/typings";
 import { calculateAge } from "@/utils/utils";
+
+// Define profile information handlers to process different types of information
+const profileInfoHandlers = {
+  // Handle name information
+  name: {
+    parse: (item) => {
+      if (!item) return "";
+      return item.value.data.value;
+    },
+  },
+
+  // Handle age information
+  age: {
+    parse: (item) => {
+      if (!item) return 0;
+      return calculateAge(new Date(item.value.data.value));
+    },
+  },
+
+  // Add more handlers for other information types as needed
+  // Example:
+  // bio: {
+  //   parse: (item) => item?.value?.data?.value || ""
+  // }
+};
+
+// Interest display component to keep JSX clean
+const InterestBadge = ({ interestName }) => (
+  <View
+    borderWidth="$1"
+    borderColor="$yellow5"
+    style={styles.personalInfoInterestsWrapper}
+  >
+    <Text style={styles.personalInfoInterestsText}>{interestName}</Text>
+  </View>
+);
 
 type ProfileCardProps = {
   profile: Profile;
@@ -18,23 +54,19 @@ const ProfileCard = ({ profile }: ProfileCardProps) => {
   const { getInterestName } = useProfile();
   const { information, interests = [], media } = profile;
 
-  const { name, age } = information;
+  // Extract profile information using handlers
+  const parsedInfo = useMemo(() => {
+    const result = {};
 
-  const parsedName = useMemo(() => {
-    if (name) {
-      const nameData = name.value.data;
-      return nameData.value;
-    }
-    return "";
-  }, [name]);
+    // Process each information type with its corresponding handler
+    Object.entries(information || {}).forEach(([key, item]) => {
+      if (profileInfoHandlers[key]) {
+        result[key] = profileInfoHandlers[key].parse(item);
+      }
+    });
 
-  const parsedAge = useMemo(() => {
-    if (age) {
-      const ageData = age.value.data;
-      return calculateAge(new Date(ageData.value));
-    }
-    return 0;
-  }, [age]);
+    return result;
+  }, [information]);
 
   const handleProfilePress = () => {
     router.push({
@@ -58,21 +90,15 @@ const ProfileCard = ({ profile }: ProfileCardProps) => {
 
       <View style={styles.personalInfoWrapper}>
         <Text style={styles.personalInfoGreeting}>
-          {parsedName}, {parsedAge}
+          {parsedInfo.name}, {parsedInfo.age}
         </Text>
 
         <View style={styles.interestsContainer}>
           {interests.map((interest, index) => (
-            <View
+            <InterestBadge
               key={index}
-              borderWidth="$1"
-              borderColor="$yellow5"
-              style={styles.personalInfoInterestsWrapper}
-            >
-              <Text style={styles.personalInfoInterestsText}>
-                {getInterestName(interest)}
-              </Text>
-            </View>
+              interestName={getInterestName(interest)}
+            />
           ))}
         </View>
       </View>

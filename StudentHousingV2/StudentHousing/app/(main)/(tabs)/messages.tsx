@@ -212,12 +212,12 @@ export default function MessagesScreen() {
         return;
       }
 
-      console.log("Fetched connections:", data);
-
       const connections = data as Profile[];
+      console.log("connections", connections);
 
       const withConversations: Profile[] = [];
       const withoutConversations: Profile[] = [];
+
       const convoIds: string[] = [];
       const mapping: Record<string, Profile> = {};
 
@@ -293,8 +293,6 @@ export default function MessagesScreen() {
                   },
                 }
               );
-
-              console.log("Profile data:", profileData);
 
               if (profileData && profileData.length > 0) {
                 const newConnection = profileData[0] as Profile;

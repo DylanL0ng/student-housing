@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { TextField } from "./TextField";
 import { MultiSelect } from "./MultiSelect";
 import { SliderInput } from "./Slider";
@@ -22,7 +22,7 @@ import { useProfile } from "@/providers/ProfileProvider";
 
 interface CreationInputFactoryProps {
   question: Question;
-  state: [any, any];
+  state: [any, React.Dispatch<React.SetStateAction<any>>];
 }
 
 export const CreationInputFactory = ({
@@ -31,17 +31,39 @@ export const CreationInputFactory = ({
 }: CreationInputFactoryProps) => {
   const { session } = useAuth();
   const { activeProfileId, globalInterests, getInterestName } = useProfile();
+  const [inputState, setInputState] = state;
+  const [registryOptions, setRegistryOptions] = useState<MultiSelectOptions[]>(
+    []
+  );
 
-  if (!session) return <></>;
-
+  // Fetch registry options when needed
   useEffect(() => {
-    console.log("Question:", question);
-  }, [question]);
+    if (question.type === "multiSelect" && question.registry) {
+      fetchRegistryOptions(question.registry);
+    }
+  }, [question.type, question.registry]);
 
-  const loadImages = useCallback(async () => {
+  // Fetch data from registry
+  const fetchRegistryOptions = async (registry: string) => {
     try {
-      if (!activeProfileId) return;
+      const { data, error } = await supabase.from(registry).select("id, label");
 
+      if (error) {
+        console.error("Error fetching registry data:", error);
+        return;
+      }
+
+      setRegistryOptions(data || []);
+    } catch (error) {
+      console.error("Registry fetch error:", error);
+    }
+  };
+
+  // Load images for media type inputs
+  const loadImages = useCallback(async () => {
+    if (!activeProfileId || question.type !== "media") return;
+
+    try {
       const images = await supabase.storage
         .from("profile-images")
         .list(activeProfileId);
@@ -68,24 +90,24 @@ export const CreationInputFactory = ({
 
       const sortedImages = newImages.sort((a, b) => a.order - b.order);
 
-      const [inputState, setInputState] = state;
-      const newMedia = sortedImages;
-
       setInputState({
         ...inputState,
-        media: newMedia,
+        media: sortedImages,
       });
     } catch (error) {
       console.error("Image loading error:", error);
     }
-  }, [activeProfileId]);
+  }, [activeProfileId, question.type, inputState, setInputState]);
 
+  // Load media on component mount or profile change
   useEffect(() => {
     loadImages();
-  }, [activeProfileId]);
+  }, [activeProfileId, loadImages]);
 
+  if (!session) return <></>;
+
+  // Handle special case for interests
   if (question.key === "interests") {
-    const [inputState, setInputState] = state;
     return (
       <MultiSelect
         options={globalInterests.map((id) => ({
@@ -104,55 +126,56 @@ export const CreationInputFactory = ({
     );
   }
 
-  const [inputState, setInputState] = state;
+  // Update state utility function to avoid repetition
+  const updateInputState = (field: string, value: any) => {
+    setInputState({
+      ...inputState,
+      [field]: value,
+    });
+  };
+
+  // Render the appropriate input component based on question type
   switch (question.type) {
-    case "text":
-      let textOptions = question.options as InputOptions;
+    case "text": {
+      const textOptions = question.options as InputOptions;
       return (
         <TextField
           value={inputState.text}
-          onChange={(value) => {
-            setInputState({
-              ...inputState,
-              text: value,
-            });
-          }}
+          onChange={(value) => updateInputState("text", value)}
           options={{
             placeholder: textOptions?.placeholder || "",
           }}
         />
       );
-    case "multiSelect":
-      let multiSelectOptions = question.options as MultiSelectOptions[];
+    }
+
+    case "multiSelect": {
+      const multiSelectOptions = question.options as MultiSelectOptions[];
+      const options = question.registry ? registryOptions : multiSelectOptions;
+
       return (
         <MultiSelect
-          options={multiSelectOptions}
-          onChange={(selected) => {
-            setInputState({
-              ...inputState,
-              multiSelect: selected,
-            });
-          }}
+          options={options}
+          onChange={(selected) => updateInputState("multiSelect", selected)}
           value={inputState.multiSelect}
+          singleSelect={false}
         />
       );
-    case "select":
-      let selectOptions = question.options.values as MultiSelectOptions[];
-      console.log("selectOptions", selectOptions);
+    }
+
+    case "select": {
+      const selectOptions = question.options.values as MultiSelectOptions[];
       return (
         <MultiSelect
           options={selectOptions}
-          onChange={(selected) => {
-            setInputState({
-              ...inputState,
-              select: selected,
-            });
-          }}
+          onChange={(selected) => updateInputState("select", selected)}
           value={inputState.select}
           singleSelect={true}
         />
       );
-    case "slider":
+    }
+
+    case "slider": {
       const sliderOptions = question.options as SliderOptions;
       const { range } = sliderOptions;
       const [min, max, step] = range;
@@ -163,66 +186,47 @@ export const CreationInputFactory = ({
           max={max}
           step={step}
           prefix="€"
-          onValueChange={(value) => {
-            setInputState({
-              ...inputState,
-              slider: value,
-            });
-          }}
+          onValueChange={(value) => updateInputState("slider", value)}
         />
       );
+    }
+
     case "date":
       return (
         <DatePicker
           value={inputState.date}
-          onValueChange={(value) => {
-            setInputState({
-              ...inputState,
-              date: value,
-            });
-          }}
+          onValueChange={(value) => updateInputState("date", value)}
           showAgeLabel
         />
       );
+
     case "media":
       return (
         <MediaUpload
-          // onLoad={() => {}}
           onUpload={(image) => {
-            const [inputState, setInputState] = state;
-
             const newMedia = [...inputState.media, image];
-            setInputState({
-              ...inputState,
-              media: newMedia,
-            });
+            updateInputState("media", newMedia);
           }}
           onDelete={(image) => {
-            const [inputState, setInputState] = state;
             const newMedia = [...inputState.media].filter(
               (img: ImageObject) => img.uri !== image.uri
             );
-            setInputState({
-              ...inputState,
-              media: newMedia,
-            });
+            updateInputState("media", newMedia);
           }}
           images={inputState.media as ImageObject[]}
         />
       );
+
     case "location":
       return (
         <LocationPicker
           showSaveButton={false}
-          onLocationChange={(location) => {
-            console.log(location);
-            setInputState({
-              ...inputState,
-              location: location,
-            });
-          }}
+          onLocationChange={(location) =>
+            updateInputState("location", location)
+          }
         />
       );
+
     default:
       return <View />;
   }

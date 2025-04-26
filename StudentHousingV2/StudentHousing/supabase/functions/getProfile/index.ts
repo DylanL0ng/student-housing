@@ -1,18 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { getUserData } from "../_utils/supabase.ts";
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    });
-  }
   try {
     const { userId, minimal, mode } = await req.json();
-    console.log("userId", userId, mode);
     const userDataResult = await getUserData([userId], {
       minimal,
       mode,

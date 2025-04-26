@@ -16,7 +16,8 @@ const TextInputScreen = () => {
 
   const parsedItem = JSON.parse(Array.isArray(item) ? item[0] : item);
 
-  const { label, placeholder, data } = parsedItem.information.value;
+  const { type, value } = parsedItem;
+  const { label, placeholder, data } = value;
 
   const [inputValue, setInputValue] = useState(data.value);
 
@@ -25,14 +26,13 @@ const TextInputScreen = () => {
       .from("profile_information")
       .upsert({
         profile_id: activeProfileId,
-        key: parsedItem.information.key,
+        key: type,
         value: {
-          ...parsedItem.information.value,
           data: { value: inputValue },
         },
       })
       .eq("profile_id", activeProfileId)
-      .eq("key", parsedItem.information.key)
+      .eq("key", type)
       .eq("view", "flatmate");
   };
 
