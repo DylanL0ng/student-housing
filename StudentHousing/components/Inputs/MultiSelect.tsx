@@ -23,18 +23,21 @@ export const MultiSelect = ({
   const [optionsState, setOptionsState] = useState<Option[]>(options);
 
   useEffect(() => {
-    console.log("Options updated:", options);
     setOptionsState(options);
   }, [options]);
+
   const handleSelect = useCallback(
     (id: string) => {
       let newSelection: string[];
 
+      // if singleSelect is true, only one option can be selected at a time
+      // if the selected option is already in the value array, remove it
+
+      // if the selected option is not in the value array, add it
+      // if the selected option is already in the value array, remove it
       if (singleSelect) {
-        // Single select behavior - toggle the selected item
         newSelection = value.includes(id) ? [] : [id];
       } else {
-        // Multi-select behavior - add/remove the item
         newSelection = value.includes(id)
           ? value.filter((i) => i !== id)
           : [...value, id];

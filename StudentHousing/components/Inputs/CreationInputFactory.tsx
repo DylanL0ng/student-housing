@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { TextField } from "./TextField";
 import { MultiSelect } from "./MultiSelect";
 import { SliderInput } from "./Slider";
@@ -22,7 +28,7 @@ import { useProfile } from "@/providers/ProfileProvider";
 
 interface CreationInputFactoryProps {
   question: Question;
-  state: [any, React.Dispatch<React.SetStateAction<any>>];
+  state: [any, Dispatch<SetStateAction<any>>];
 }
 
 export const CreationInputFactory = ({
@@ -38,11 +44,8 @@ export const CreationInputFactory = ({
     getAmenityName,
   } = useProfile();
 
-  console.log("CreationInputFactory", question.key, question.type);
-
   const [inputState, setInputState] = state;
 
-  // Load images for media type inputs
   const loadImages = useCallback(async () => {
     if (!activeProfileId || question.type !== "media") return;
 
@@ -82,14 +85,12 @@ export const CreationInputFactory = ({
     }
   }, [activeProfileId, question.type, inputState, setInputState]);
 
-  // Load media on component mount or profile change
   useEffect(() => {
     loadImages();
   }, [activeProfileId, loadImages]);
 
   if (!session) return <></>;
 
-  // Handle special case for interests
   if (question.key === "interests") {
     return (
       <MultiSelect
@@ -128,7 +129,6 @@ export const CreationInputFactory = ({
     );
   }
 
-  // Update state utility function to avoid repetition
   const updateInputState = (field: string, value: any) => {
     setInputState({
       ...inputState,
@@ -136,7 +136,6 @@ export const CreationInputFactory = ({
     });
   };
 
-  // Render the appropriate input component based on question type
   switch (question.type) {
     case "text": {
       const textOptions = question.options as InputOptions;

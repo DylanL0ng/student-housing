@@ -8,51 +8,57 @@ import {
   Text,
 } from "react-native";
 
-interface Props<T extends Record<string, unknown> & { id: string | number }> {
+interface CardItem {
+  id: string | number;
+  [key: string]: any;
+}
+
+interface SwipeHandlerProps<T extends CardItem> {
   Card: React.ComponentType<T>;
   data: T[];
-  onSwipeRight: (data: { index: number; data: T }) => void;
-  onSwipeLeft: (data: { index: number; data: T }) => void;
+  onSwipeRight: (item: { index: number; data: T }) => void;
+  onSwipeLeft: (item: { index: number; data: T }) => void;
   requestUpdate: () => void;
   style?: object;
 }
 
-export default function SwipeHandler<
-  T extends Record<string, unknown> & { id: string | number }
->({ Card, data, onSwipeRight, onSwipeLeft, requestUpdate, style }: Props<T>) {
-  const pan = useRef(new Animated.ValueXY()).current;
-  const [curIndex, setCurIndex] = useState(0);
-  const isSwipingRef = useRef(false);
+export default function SwipeHandler<T extends CardItem>({
+  Card,
+  data,
+  onSwipeRight,
+  onSwipeLeft,
+  requestUpdate,
+  style,
+}: SwipeHandlerProps<T>) {
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [currentData, setCurrentData] = useState(data);
+  const isSwipingRef = useRef(false);
+  const pan = useRef(new Animated.ValueXY()).current;
   const SCREEN_WIDTH = Dimensions.get("window").width;
 
-  // Store the actual index in a ref to prevent closure issues
-  const indexRef = useRef(0);
-
+  // reset the current data when the data prop changes
   useEffect(() => {
     setCurrentData(data);
-    indexRef.current = 0;
-    setCurIndex(0);
+    setCurrentIndex(0);
   }, [data]);
 
+  // when the current index exceeds the data length, request an update
   useEffect(() => {
-    // Call requestUpdate if we've gone past the end of the array
-    if (curIndex >= currentData.length) {
+    if (currentIndex >= currentData.length) {
       requestUpdate();
     }
-  }, [curIndex, currentData, requestUpdate]);
+  }, [currentIndex, currentData, requestUpdate]);
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => !isSwipingRef.current,
 
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
+      onMoveShouldSetPanResponder: (_, gestureState) => {
         if (isSwipingRef.current) return false;
         return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
       },
 
       onPanResponderGrant: () => {
-        // Mark that we're starting a swipe
         isSwipingRef.current = true;
       },
 
@@ -65,52 +71,32 @@ export default function SwipeHandler<
         const swipeThreshold = SCREEN_WIDTH / 3;
 
         if (Math.abs(dx) > swipeThreshold) {
-          // Block additional swipes during animation
-          isSwipingRef.current = true;
-
           Animated.timing(pan, {
             toValue: { x: dx > 0 ? SCREEN_WIDTH : -SCREEN_WIDTH, y: dy },
             duration: 200,
             useNativeDriver: false,
           }).start(() => {
-            // Create a local copy of the current index to use in callbacks
-            const currentIdx = indexRef.current;
-
-            let action = onSwipeLeft;
-            if (dx > 0) {
-              action = onSwipeRight;
-            }
-
-            // Prepare the data object to pass to the handler
-            const dataToPass = {
-              index: currentIdx,
-              data: currentData[currentIdx],
+            // handle swipe depending on direction
+            const handler = dx > 0 ? onSwipeRight : onSwipeLeft;
+            const swipedItem = {
+              index: currentIndex,
+              data: currentData[currentIndex],
             };
 
-            // Update the index ref first
-            indexRef.current = currentIdx + 1;
-
-            // Reset animation before state updates
             pan.setValue({ x: 0, y: 0 });
 
-            // Execute the handler
-            action(dataToPass);
+            handler(swipedItem);
 
-            // Now update the state with the new index
-            // Use setTimeout to push this to the next event cycle
-            setTimeout(() => {
-              setCurIndex(indexRef.current);
-              // Allow swiping again
-              isSwipingRef.current = false;
-            }, 0);
+            setCurrentIndex(currentIndex + 1);
+            isSwipingRef.current = false;
           });
         } else {
+          // reset position if swipe is not significant
           Animated.spring(pan, {
             toValue: { x: 0, y: 0 },
             friction: 5,
             useNativeDriver: false,
           }).start(() => {
-            // Allow swiping again after spring-back animation
             isSwipingRef.current = false;
           });
         }
@@ -120,8 +106,8 @@ export default function SwipeHandler<
     })
   ).current;
 
-  const renderCard = (index: number) => {
-    if (!currentData[index]) return null;
+  const renderCards = () => {
+    if (!currentData[currentIndex]) return null;
 
     const currentCardStyle = {
       transform: [
@@ -140,8 +126,6 @@ export default function SwipeHandler<
 
     const nextCardStyle = {
       transform: [
-        { translateX: 0 },
-        { translateY: 0 },
         {
           scale: pan.x.interpolate({
             inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
@@ -150,26 +134,25 @@ export default function SwipeHandler<
           }),
         },
       ],
-      opacity: 1,
       zIndex: 0,
     };
 
     return (
       <>
         <Animated.View
-          key={currentData[index].id}
+          key={currentData[currentIndex].id}
           style={[styles.cardContainer, currentCardStyle]}
           {...panResponder.panHandlers}
         >
-          <Card {...currentData[index]} />
+          <Card {...currentData[currentIndex]} />
         </Animated.View>
 
-        {index + 1 < currentData.length && (
+        {currentIndex + 1 < currentData.length && (
           <Animated.View
-            key={currentData[index + 1].id}
+            key={currentData[currentIndex + 1].id}
             style={[styles.cardContainer, nextCardStyle]}
           >
-            <Card {...currentData[index + 1]} />
+            <Card {...currentData[currentIndex + 1]} />
           </Animated.View>
         )}
       </>
@@ -177,9 +160,9 @@ export default function SwipeHandler<
   };
 
   return (
-    <View style={StyleSheet.flatten([styles.container, style])}>
-      {curIndex < currentData.length && currentData.length > 0 ? (
-        renderCard(curIndex)
+    <View style={[styles.container, style]}>
+      {currentIndex < currentData.length && currentData.length > 0 ? (
+        renderCards()
       ) : (
         <View style={styles.emptyStateContainer}>
           <Text style={styles.emptyStateText}>
@@ -201,7 +184,6 @@ const styles = StyleSheet.create({
     height: "100%",
     width: "100%",
     position: "absolute",
-    zIndex: 9999,
   },
   emptyStateContainer: {
     justifyContent: "center",

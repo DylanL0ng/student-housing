@@ -8,8 +8,8 @@ import { Text, useTheme, View } from "tamagui";
 const ConversationMini = (profile: Profile) => {
   const conversation = profile.conversations[0];
 
-  const recentMessage = conversation.latest_message;
-  const yourTurn = recentMessage.sender_id === profile.id;
+  const recentMessage = conversation?.latest_message;
+  const yourTurn = recentMessage?.sender_id === profile.id;
 
   const theme = useTheme();
   const router = useRouter();

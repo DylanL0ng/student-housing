@@ -21,9 +21,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useProfile } from "@/providers/ProfileProvider";
 
-const Header: React.FC<{
-  profile: any;
-}> = ({ profile }) => {
+const Header = ({ profile }: { profile: Profile }) => {
   const gotoUserProfile = () => {
     router.push({
       pathname: "/profile",

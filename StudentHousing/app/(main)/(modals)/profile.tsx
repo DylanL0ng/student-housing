@@ -23,18 +23,6 @@ interface ProfileInformationPromptData {
   prompt_id: string;
 }
 
-interface ProfileInformationGender extends ProfileInformation {
-  value: { data: "Male" | "Female" };
-}
-
-interface ProfileInformationBudget extends ProfileInformation {
-  value: { data: number };
-}
-
-interface ProfileInformationBio extends ProfileInformation {
-  value: { data: string };
-}
-
 type ContentItem = {
   type: "image" | "info";
   data: any;
@@ -66,9 +54,6 @@ const ProfileModal = () => {
       Array.isArray(profile) ? profile[0] : profile
     ) as Profile;
 
-    console.log("Parsed Profile:", parsedProfile);
-
-    // Sort information by priority_order if it exists
     const information = Object.values(parsedProfile.information || {}).sort(
       (a, b) => (a.priority_order || 0) - (b.priority_order || 0)
     );
@@ -77,14 +62,12 @@ const ProfileModal = () => {
     setProfileInformation(information);
   }, [profile]);
 
-  // Create interspersed content with images and information
   useEffect(() => {
     if (!profileData || !profileInformation.length) return;
 
     const media = profileData.media || [];
     const info = [...profileInformation];
 
-    // Start with first image
     const contentItems: ContentItem[] = [];
 
     if (media.length > 0) {
@@ -95,12 +78,10 @@ const ProfileModal = () => {
       });
     }
 
-    let mediaIndex = 1; // Start from the second image
+    let mediaIndex = 1;
     let infoIndex = 0;
 
-    // Process all info items in their priority order
     while (infoIndex < info.length) {
-      // Add the info item
       contentItems.push({
         type: "info",
         data: info[infoIndex],
@@ -108,10 +89,9 @@ const ProfileModal = () => {
       });
       infoIndex++;
 
-      // Decide if we should add an image after this info item
       const shouldAddImage =
         mediaIndex < media.length &&
-        (Math.random() < 0.4 || infoIndex === info.length); // 40% chance or if it's the last info item
+        (Math.random() < 0.4 || infoIndex === info.length);
 
       if (shouldAddImage) {
         contentItems.push({
@@ -123,7 +103,6 @@ const ProfileModal = () => {
       }
     }
 
-    // Add any remaining images at the end
     while (mediaIndex < media.length) {
       contentItems.push({
         type: "image",
@@ -133,14 +112,12 @@ const ProfileModal = () => {
       mediaIndex++;
     }
 
-    console.log("contentItems", contentItems);
     setInterspersedContent(contentItems);
   }, [profileData, profileInformation]);
 
   const sendProfileInteraction = async () => {
     if (!profileData) return;
 
-    // Animate the like button
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 1.2,
@@ -154,9 +131,6 @@ const ProfileModal = () => {
       }),
     ]).start();
 
-    // Here you would typically send an API call to record the interaction
-    console.log(`Sending like interaction for profile: ${profileData.id}`);
-
     const _response = await supabase.functions.invoke(
       "sendProfileInteraction",
       {
@@ -169,13 +143,13 @@ const ProfileModal = () => {
       }
     );
 
-    const { status, response } = _response.data;
+    const { status } = _response.data;
     if (status === "success") router.back();
   };
 
   const RenderProfileItem = ({ item }: { item: any }) => {
-    switch (item.key) {
-      case "bio":
+    switch (item.type) {
+      case "biography":
         return (
           <View
             overflow="hidden"
@@ -192,7 +166,7 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               Bio
             </Text>
-            <Text fontSize="$8">{item.value?.data || ""}</Text>
+            <Text fontSize="$8">{`${item.value.data.value}` || ""}</Text>
           </View>
         );
       case "age":
@@ -220,25 +194,7 @@ const ProfileModal = () => {
           </View>
         );
       case "gender":
-        return (
-          <View
-            overflow="hidden"
-            paddingBlock="$8"
-            paddingInline="$4"
-            bg="$color4"
-            display="flex"
-            gap="$2"
-            style={{
-              borderRadius: 16,
-              marginVertical: 8,
-            }}
-          >
-            <Text fontWeight="bold" fontSize="$3">
-              Gender
-            </Text>
-            <Text fontSize="$8">{item.value?.data || ""}</Text>
-          </View>
-        );
+        return <></>;
       case "budget":
         return (
           <View
@@ -256,7 +212,27 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               Budget
             </Text>
-            <Text fontSize="$8">€{item.value?.data || ""}</Text>
+            <Text fontSize="$8">€{item.value?.data?.value || ""}</Text>
+          </View>
+        );
+      case "name":
+        return (
+          <View
+            overflow="hidden"
+            paddingBlock="$4"
+            paddingInline="$4"
+            bg="$color4"
+            display="flex"
+            gap="$2"
+            style={{
+              borderRadius: 16,
+              marginVertical: 8,
+            }}
+          >
+            <Text fontWeight="bold" fontSize="$3">
+              Name
+            </Text>
+            <Text fontSize="$8">{item.value?.data?.value || ""}</Text>
           </View>
         );
       case "university":
@@ -276,13 +252,7 @@ const ProfileModal = () => {
             <Text fontWeight="bold" fontSize="$3">
               University
             </Text>
-            <Text fontSize="$8">
-              {item.value?.data?.value?.label
-                ? typeof item.value.data.value.label === "string"
-                  ? JSON.parse(item.value.data.value.label)
-                  : String(item.value.data.value.label)
-                : ""}
-            </Text>
+            <Text fontSize="$8">{item.value?.data?.value?.label}</Text>
           </View>
         );
       default:
@@ -357,7 +327,7 @@ const ProfileModal = () => {
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Text fontWeight="800" fontSize="$8" color="$color">
-              {profileData?.title}
+              {profileData?.information.name.value.data.value}
             </Text>
             <Text fontWeight="600" fontSize="$6" color="$color12"></Text>
           </View>

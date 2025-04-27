@@ -13,8 +13,12 @@ import { useRouter } from "expo-router";
 type Location = {
   latitude: number;
   longitude: number;
-  // range: number;
 };
+
+interface AmenityOption {
+  id: string;
+  label: string;
+}
 
 type ProfileType = "flatmate" | "accommodation";
 
@@ -41,16 +45,13 @@ interface ProfileContextType {
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
-export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
+export const ProfileProvider = ({ children }: { children: ReactNode }) => {
   const [interests, _setInterests] = useState<string[]>([]);
   const [globalInterests, setGlobalInterests] = useState<string[]>([]);
   const [interestRegistery, setInterestRegistry] = useState<
     Record<string, string>
   >({});
 
-  // New state for amenities
   const [amenities, _setAmenities] = useState<string[]>([]);
   const [globalAmenities, setGlobalAmenities] = useState<string[]>([]);
   const [amenityRegistry, setAmenityRegistry] = useState<
@@ -68,39 +69,48 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
   const { viewMode } = useViewMode();
 
   const activeProfileId = profileIds[viewMode as ProfileType] || null;
-  console.log(viewMode, profileIds);
 
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase
         .from("interest_registry")
         .select("*");
+
       if (error) {
         console.error("Error fetching interests:", error);
       } else if (data) {
-        const registry: Record<string, string> = {};
-        data.forEach((interest) => {
-          registry[interest.id] = interest.interest;
-        });
+        const registry = data.reduce((acc, interest) => {
+          if (interest.interest) {
+            acc[interest.id] = interest.interest;
+          }
+          return acc;
+        }, {});
+
         setInterestRegistry(registry);
         setGlobalInterests(data.map((interest) => interest.id));
       }
 
-      const { data: amenityData, error: amenityError } = await supabase
+      const { data: amenityData } = await supabase
         .from("filters")
         .select("*")
         .eq("filter_key", "amenities")
         .maybeSingle();
 
       if (amenityData) {
-        const registry: Record<string, string> = {};
-        amenityData.options.values.forEach((amenity) => {
-          registry[amenity.id] = amenity.label;
-        });
-        setAmenityRegistry(registry);
-        setGlobalAmenities(
-          amenityData.options.values.map((amenity) => amenity.id)
+        const values = amenityData?.options?.values;
+
+        const registry: Record<string, string> = values.reduce(
+          (acc: Record<string, string>, amenity: AmenityOption) => {
+            if (amenity.id) {
+              acc[amenity.id] = amenity.label;
+            }
+            return acc;
+          },
+          {}
         );
+
+        setAmenityRegistry(registry);
+        setGlobalAmenities(values.map((amenity: AmenityOption) => amenity.id));
       }
 
       if (!session?.user.id) return;
@@ -116,17 +126,19 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
 
       // Check if the user has created a profile
       const isNewAccount = userProfiles.filter(
-        (profile) => profile.type === "flatmate"
-      ).created;
+        (profile) => profile.type === viewMode
+      )[0]?.created;
 
       // Convert the user profiles to object with type as key and id as value
-      const profileMapping = userProfiles.reduce((acc, profile) => {
-        acc[profile.type as ProfileType] = profile.id;
-        return acc;
-      }, {} as Record<ProfileType, string>);
+      const profileMapping = userProfiles.reduce<Record<ProfileType, string>>(
+        (acc, profile) => {
+          acc[profile.type as ProfileType] = profile.id;
+          return acc;
+        },
+        {} as Record<ProfileType, string>
+      );
 
       setNewAccount(isNewAccount);
-      console.log("Profile mapping:", profileMapping);
       setProfileIds(profileMapping);
     })();
   }, [session?.user.id]);
@@ -160,9 +172,8 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         .single();
 
       if (userAmenities) {
-        const amenityIds = userAmenities.value.data.value.map(
-          (amenity) => amenity.id
-        );
+        const values = userAmenities.value?.data?.value || [];
+        const amenityIds = values.map((amenity: AmenityOption) => amenity.id);
 
         _setAmenities(amenityIds);
       }
@@ -209,7 +220,7 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         coordinates: [location.longitude, location.latitude],
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("profile_locations")
         .update({ point: geoPoint })
         .eq("profile_id", activeProfileId);

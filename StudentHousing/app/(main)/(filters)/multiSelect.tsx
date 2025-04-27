@@ -29,7 +29,6 @@ const MultiSelect: React.FC = () => {
       }
     };
 
-    // clearFilters();
     fetchData();
   }, [filter.filter_key]);
 

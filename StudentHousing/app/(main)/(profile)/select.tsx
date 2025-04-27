@@ -16,7 +16,6 @@ export default function SelectScreen() {
   const [loading, setLoading] = useState(false);
   const [currentSelection, setCurrentSelection] = useState<string[]>([]);
 
-  // Parse incoming data safely using useMemo
   const parsedItem = useMemo(() => {
     const { item } = route.params || {};
     if (!item) return null;
@@ -30,7 +29,6 @@ export default function SelectScreen() {
   }, [route.params]);
 
   const { type, value, creation } = parsedItem;
-  console.log("parsedItem", parsedItem);
 
   const title = value?.title || "Select Options";
 
@@ -44,14 +42,12 @@ export default function SelectScreen() {
     }));
   }, [options]);
 
-  // Initialize selection on mount with proper dependencies
   useEffect(() => {
     const dataValue = value?.data?.value;
     if (!dataValue) return;
 
     const initialValue = Array.isArray(dataValue) ? dataValue : [dataValue];
 
-    console.log("Initial value:", value.data.value);
     if (initialValue.length > 0) {
       setCurrentSelection(
         initialValue.map((item) => {
@@ -64,7 +60,6 @@ export default function SelectScreen() {
     }
   }, [parsedItem]);
 
-  // Handle saving selection
   const saveSelection = async () => {
     if (!activeProfileId || !type) {
       console.error("User session or database key not available.");

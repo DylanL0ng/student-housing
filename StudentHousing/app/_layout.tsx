@@ -17,33 +17,28 @@ import { createTamagui, TamaguiProvider, Text, useTheme } from "tamagui";
 import { ModeProvider } from "@/providers/ViewModeProvider";
 import { ProfileProvider } from "@/providers/ProfileProvider";
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-// you usually export this from a tamagui.config.ts file
 const config = createTamagui(defaultConfig);
 
 type Conf = typeof config;
 
-// make imports typed
 declare module "tamagui" {
   interface TamaguiCustomConfig extends Conf {}
 }
 
 export default function RootLayout() {
-  const [session, setSession] = useState<Session | null>(null);
-  const colorScheme = useColorScheme();
+  const [_, setSession] = useState<Session | null>(null);
+
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
 
   useEffect(() => {
-    const fetchSession = async () => {
+    (async () => {
       const { data } = await supabase.auth.getSession();
-      return data.session;
-    };
-
-    fetchSession();
+      setSession(data.session);
+    })();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {

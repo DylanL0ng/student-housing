@@ -40,7 +40,7 @@ export interface Answer {
 }
 
 export interface SliderOptions {
-  range: [number, number, number]; // [min, max, step]
+  range: [number, number, number];
 }
 
 export interface MediaOptions {
@@ -49,8 +49,6 @@ export interface MediaOptions {
 
 export interface InputOptions {
   placeholder: string;
-  // options: {
-  // };
 }
 
 export interface MultiSelectOptions {
@@ -317,7 +315,7 @@ const CreateScreen = () => {
       if (location) {
         const geoPoint = {
           type: "Point",
-          coordinates: [location.longitude, location.latitude], // [lng, lat]
+          coordinates: [location.longitude, location.latitude],
         };
 
         const { error: locationError } = await supabase
@@ -359,7 +357,6 @@ const CreateScreen = () => {
         return;
       }
 
-      console.log("3");
       const { error: createdError } = await supabase
         .from("profile_mapping")
         .update({
@@ -372,7 +369,6 @@ const CreateScreen = () => {
         return;
       }
 
-      console.log("4");
       setLoading(false);
       router.replace("/(main)/(tabs)");
     } else {

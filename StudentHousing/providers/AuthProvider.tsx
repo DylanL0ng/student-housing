@@ -15,25 +15,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSession = async () => {
+    (async () => {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
       setLoading(false);
-    };
-
-    fetchSession(); // Fetch the initial session
+    })();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!session) {
           router.replace("/(auth)/login");
-          setSession(null); // Handle the case where the session is closed
+          setSession(null);
         } else setSession(session);
       }
     );
 
     return () => {
-      listener.subscription.unsubscribe(); // Cleanup the listener on unmount
+      listener.subscription.unsubscribe();
     };
   }, []);
 

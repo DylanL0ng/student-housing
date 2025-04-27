@@ -1,6 +1,7 @@
 import Loading from "@/components/Loading";
 import supabase from "@/lib/supabase";
 import { useProfile } from "@/providers/ProfileProvider";
+import { Profile } from "@/typings";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { TouchableOpacity, FlatList, useWindowDimensions } from "react-native";
@@ -13,21 +14,19 @@ const RequestsPage = () => {
   const { width } = useWindowDimensions();
 
   const [isLoading, setIsLoading] = useState(true);
+
   const gap = 12;
-  // Calculate item width based on screen width, padding, and gap
-  const itemWidth = (width - 16 - gap) / 2; // 16 is from the paddingInline="$2"
+  const itemWidth = (width - 16 - gap) / 2;
 
   useEffect(() => {
     (async () => {
       setIsLoading(true);
-      const { data, error } = await supabase.functions.invoke(
-        "getHousingRequests",
-        {
-          body: {
-            sourceId: activeProfileId,
-          },
-        }
-      );
+
+      const { data } = await supabase.functions.invoke("getHousingRequests", {
+        body: {
+          sourceId: activeProfileId,
+        },
+      });
 
       if (data) {
         setConnections(data.response);
@@ -36,7 +35,7 @@ const RequestsPage = () => {
     })();
   }, [activeProfileId]);
 
-  const openProfile = (profile) => {
+  const openProfile = (profile: Profile) => {
     router.push({
       pathname: "/(main)/(modals)/profile",
       params: {
@@ -46,27 +45,32 @@ const RequestsPage = () => {
     });
   };
 
-  const renderItem = ({ item, index }) => {
-    // Determine if this is an odd or even item
+  const RenderHousingRequest = ({
+    item: profile,
+    index,
+  }: {
+    item: Profile;
+    index: number;
+  }) => {
     const isEven = index % 2 === 0;
 
     return (
       <TouchableOpacity
         activeOpacity={0.9}
-        onPress={() => openProfile(item)}
+        onPress={() => openProfile(profile)}
         style={{
           width: itemWidth,
           marginRight: isEven ? gap : 0,
           marginBottom: gap,
         }}
       >
-        <View borderRadius={"$4"} aspectRatio={0.75} key={item.id}>
+        <View borderRadius={"$4"} aspectRatio={0.75} key={profile.id}>
           <Image
             transition="0"
             overflow="hidden"
             borderRadius={"$4"}
             flex={1}
-            source={{ uri: item.media[0] }}
+            source={{ uri: profile.media[0] }}
           />
         </View>
       </TouchableOpacity>
@@ -86,7 +90,7 @@ const RequestsPage = () => {
           </Text>
           <FlatList
             data={connections}
-            renderItem={renderItem}
+            renderItem={RenderHousingRequest}
             keyExtractor={(item, index) => item.id + "-" + index}
             numColumns={2}
             contentContainerStyle={{ paddingBottom: gap }}

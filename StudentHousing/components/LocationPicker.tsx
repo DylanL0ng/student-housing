@@ -122,7 +122,7 @@ export const LocationPicker = ({
             <Marker
               coordinate={center}
               anchor={{ x: 0.5, y: 1 }}
-              style={{ opacity: 1 }} // hides the marker
+              style={{ opacity: 1 }}
             ></Marker>
           )}
         </MapView>

@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTheme, View, Button } from "tamagui";
 import { LocationPicker } from "@/components/LocationPicker";
-import { Alert } from "react-native";
 import { HeaderWithBack } from "../(filters)";
 import { useProfile } from "@/providers/ProfileProvider";
-import Toast from "react-native-toast-message";
 import { useNavigation } from "expo-router";
 
 const LocationScreen = () => {
-  const theme = useTheme();
   const { location, setLocation } = useProfile();
 
   const navigation = useNavigation();
@@ -24,7 +21,6 @@ const LocationScreen = () => {
     range?: number;
   } | null>(null);
 
-  // Set initial location when user location is available
   useEffect(() => {
     if (location) {
       setInitialLocation({
@@ -35,7 +31,6 @@ const LocationScreen = () => {
   }, [location]);
 
   const handleSaveLocation = async () => {
-    console.log("Saving location:", selectedLocation);
     if (!selectedLocation) return;
 
     try {
@@ -45,14 +40,8 @@ const LocationScreen = () => {
       });
 
       navigation.goBack();
-      // Toast.show({
-      //   type: "success",
-      //   text1: "Location saved",
-      // });
-      //   Alert.alert("Success", "Your location has been updated.");
     } catch (error) {
       console.error("Failed to update location", error);
-      Alert.alert("Error", "There was an issue saving your location.");
     }
   };
 

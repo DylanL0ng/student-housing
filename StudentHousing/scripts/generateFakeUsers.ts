@@ -1,8 +1,6 @@
 import supabase from "@/lib/supabase";
 import { faker } from "@faker-js/faker";
-import { v4 as uuidv4 } from "uuid";
 
-// Constants
 const INTERESTS = [
   "11239c98-71f9-40c1-8547-f865f5a5a022",
   "338e7d05-3e52-4780-b0b7-3591de72fc9f",
@@ -20,7 +18,6 @@ const INTERESTS = [
 
 const AMENITIES = ["internet", "public transport"];
 
-const DEV_ID = "7edf42e0-d865-46c9-986a-0560837a02bc";
 const MIN_BUDGET = 1000;
 const MAX_BUDGET = 3000;
 const MIN_INTERESTS = 1;
@@ -28,7 +25,6 @@ const MAX_INTERESTS = 5;
 const MIN_MEDIA = 1;
 const MAX_MEDIA = 3;
 
-// Types
 type ProfileInformation = {
   profile_id: string;
   key: string;
@@ -36,7 +32,6 @@ type ProfileInformation = {
   view: string;
 };
 
-// Helper Functions
 const getRandomInterests = (): string[] => {
   const count = faker.number.int({ min: MIN_INTERESTS, max: MAX_INTERESTS });
   return [...INTERESTS].sort(() => Math.random() - 0.5).slice(0, count);
@@ -54,6 +49,7 @@ const createAccommodationProfileInformation = (
     profile_id: profileId,
     key: "name",
     value: { data: { value: name } },
+    view: "public",
   },
   {
     profile_id: profileId,
@@ -61,11 +57,13 @@ const createAccommodationProfileInformation = (
     value: {
       data: { value: faker.number.int({ min: MIN_BUDGET, max: MAX_BUDGET }) },
     },
+    view: "public",
   },
   {
     profile_id: profileId,
     key: "amenities",
     value: { data: { value: [...AMENITIES] } },
+    view: "public",
   },
 ];
 
@@ -77,6 +75,7 @@ const createFlatmateProfileInformation = (
     profile_id: profileId,
     key: "name",
     value: { data: { value: name } },
+    view: "public",
   },
   {
     profile_id: profileId,
@@ -84,26 +83,31 @@ const createFlatmateProfileInformation = (
     value: {
       data: { value: faker.number.int({ min: MIN_BUDGET, max: MAX_BUDGET }) },
     },
+    view: "public",
   },
   {
     profile_id: profileId,
     key: "university",
     value: { data: { value: { id: "tud", label: "TUDublin" } } },
+    view: "public",
   },
   {
     profile_id: profileId,
     key: "biography",
     value: { data: { value: faker.lorem.paragraph(2) } },
+    view: "public",
   },
   {
     profile_id: profileId,
     key: "gender",
     value: { data: { value: ["male"] } },
+    view: "public",
   },
   {
     profile_id: profileId,
     key: "age",
     value: { data: { value: faker.date.birthdate() } },
+    view: "public",
   },
 ];
 
@@ -127,7 +131,6 @@ const uploadProfileImage = async (
     .update(path, arrayBuffer, { contentType: "image/jpeg" });
 };
 
-// Main Functions
 const createSupabaseUser = async (name: string, email: string) => {
   const { data: user, error } = await supabase.auth.admin.createUser({
     email,
@@ -165,10 +168,8 @@ const createFakeUser = async () => {
     const name = faker.person.firstName();
     const email = faker.internet.email();
 
-    // Create auth user
     const userId = await createSupabaseUser(name, email);
 
-    // Get profile mappings
     const profileIds = await getProfileMappings(userId);
     const flatmateId = profileIds["flatmate"];
     const accommodationId = profileIds["accommodation"];
@@ -182,7 +183,6 @@ const createFakeUser = async () => {
     }
 
     createFakeFlatmate(flatmateId);
-    // Create accommodation
     createFakeAccommodation(accommodationId);
 
     return { success: true, userId };
@@ -193,13 +193,11 @@ const createFakeUser = async () => {
 };
 
 const createFakeFlatmate = async (userId: string) => {
-  // Create profile information
   const name = faker.person.firstName();
   await supabase
     .from("profile_information")
     .upsert(createFlatmateProfileInformation(userId, name));
 
-  // Add location
   await supabase.from("profile_locations").upsert([
     {
       profile_id: userId,
@@ -207,7 +205,6 @@ const createFakeFlatmate = async (userId: string) => {
     },
   ]);
 
-  // Add interests
   const userInterests = getRandomInterests();
   await supabase.from("profile_interests").upsert(
     userInterests.map((interest) => ({
@@ -216,7 +213,6 @@ const createFakeFlatmate = async (userId: string) => {
     }))
   );
 
-  // Upload media
   const mediaCount = getRandomMediaCount();
   for (let i = 0; i < mediaCount; i++) {
     await uploadProfileImage(userId, i, "flatmate");
@@ -226,10 +222,6 @@ const createFakeFlatmate = async (userId: string) => {
 const createFakeAccommodation = async (userId: string) => {
   const name = faker.company.name();
 
-  console.log(
-    "Creating accommodation profile information",
-    createAccommodationProfileInformation(userId, name)
-  );
   await supabase
     .from("profile_information")
     .upsert(createAccommodationProfileInformation(userId, name));
@@ -241,14 +233,12 @@ const createFakeAccommodation = async (userId: string) => {
     },
   ]);
 
-  // Upload media
   const mediaCount = getRandomMediaCount();
   for (let i = 0; i < mediaCount; i++) {
     await uploadProfileImage(userId, i, "accommodation");
   }
 };
 
-// Main Export
 export default async function generateFakeUsers(numUsers: number) {
   const results = [];
   for (let i = 0; i < numUsers; i++) {

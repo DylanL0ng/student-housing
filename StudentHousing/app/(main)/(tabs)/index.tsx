@@ -8,17 +8,14 @@ import supabase from "@/lib/supabase";
 import { View } from "tamagui";
 import Loading from "@/components/Loading";
 import { useFocusEffect } from "expo-router";
-import { clearFilters, getSavedFilters } from "@/utils/filterUtils";
+import { getSavedFilters } from "@/utils/filterUtils";
 import { useProfile } from "@/providers/ProfileProvider";
 import { useSearchMode, useViewMode } from "@/providers/ViewModeProvider";
-import generateFakeUsers from "@/scripts/generateFakeUsers";
 
 export default function HomeScreen() {
-  const auth = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const { activeProfileId } = useProfile();
 
-  const { interests } = useProfile();
   const { searchMode } = useSearchMode();
   const [isLoading, setIsLoading] = useState(true);
 
@@ -48,7 +45,7 @@ export default function HomeScreen() {
         return;
       }
 
-      const { response, status } = _response.data;
+      const { response } = _response.data;
 
       const parsedData = response.filter((profile) => profile);
       setProfiles(parsedData || []);
@@ -67,8 +64,6 @@ export default function HomeScreen() {
 
   useEffect(() => {
     requestUpdate();
-    // clearFilters();
-    // generateFakeUsers(5);
   }, []);
 
   useEffect(() => {

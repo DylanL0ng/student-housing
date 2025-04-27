@@ -1,7 +1,12 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Define types for both contexts
 type ViewMode = "flatmate" | "accommodation";
 type SearchMode = "flatmate" | "accommodation";
 
@@ -15,15 +20,17 @@ type SearchModeContextType = {
   setSearchMode: (mode: SearchMode) => Promise<void>;
 };
 
-// Create a combined context type
 type CombinedModeContextType = ViewModeContextType & SearchModeContextType;
 
-// Create the context
 const ModeContext = createContext<CombinedModeContextType | undefined>(
   undefined
 );
 
-// Custom hook to use the combined context
+const STORAGE_KEYS = {
+  VIEW_MODE: "viewMode",
+  SEARCH_MODE: "searchMode",
+};
+
 export const useMode = () => {
   const context = useContext(ModeContext);
   if (!context) {
@@ -32,7 +39,6 @@ export const useMode = () => {
   return context;
 };
 
-// For backward compatibility or specific use cases
 export const useViewMode = () => {
   const { viewMode, setViewMode } = useMode();
   return { viewMode, setViewMode };
@@ -43,13 +49,6 @@ export const useSearchMode = () => {
   return { searchMode, setSearchMode };
 };
 
-// Storage keys as constants for consistency
-const STORAGE_KEYS = {
-  VIEW_MODE: "viewMode",
-  SEARCH_MODE: "searchMode",
-};
-
-// Generic function to load a value from storage
 const loadFromStorage = async <T extends string>(
   key: string,
   defaultValue: T
@@ -63,7 +62,6 @@ const loadFromStorage = async <T extends string>(
   }
 };
 
-// Generic function to save a value to storage
 const saveToStorage = async <T extends string>(
   key: string,
   value: T
@@ -75,16 +73,12 @@ const saveToStorage = async <T extends string>(
   }
 };
 
-// Combined provider component
-export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const ModeProvider = ({ children }: { children: ReactNode }) => {
   const [viewMode, setViewModeState] = useState<ViewMode>("flatmate");
   const [searchMode, setSearchModeState] = useState<SearchMode>("flatmate");
 
-  // Load initial states from AsyncStorage
   useEffect(() => {
-    const loadInitialStates = async () => {
+    (async () => {
       const storedViewMode = await loadFromStorage<ViewMode>(
         STORAGE_KEYS.VIEW_MODE,
         "flatmate"
@@ -96,12 +90,9 @@ export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setViewModeState(storedViewMode);
       setSearchModeState(storedSearchMode);
-    };
-
-    loadInitialStates();
+    })();
   }, []);
 
-  // Functions to update modes
   const setViewMode = async (mode: ViewMode) => {
     await saveToStorage(STORAGE_KEYS.VIEW_MODE, mode);
     setViewModeState(mode);
@@ -112,7 +103,6 @@ export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({
     setSearchModeState(mode);
   };
 
-  // Combined context value
   const contextValue: CombinedModeContextType = {
     viewMode,
     setViewMode,

@@ -22,17 +22,15 @@ export const SliderInput = ({
   prefix,
   range = false,
 }: SliderInputProps) => {
-  // Helper function to clamp and round values
   const normalizeValue = (val: number): number => {
     let normalized = Math.max(min, Math.min(max, val));
     if (step === 1) {
       return Math.round(normalized);
     }
     const steps = Math.round(normalized / step);
-    return parseFloat((steps * step).toFixed(10)); // Prevent floating point weirdness
+    return parseFloat((steps * step).toFixed(10));
   };
 
-  // Convert single value to range format with proper normalization
   const initialValue = range
     ? Array.isArray(value)
       ? [normalizeValue(value[0]), normalizeValue(value[1])]
@@ -44,7 +42,6 @@ export const SliderInput = ({
   const [localValue, setLocalValue] = useState<SliderValue>(initialValue);
   const [isSliding, setIsSliding] = useState(false);
 
-  // Sync local value when parent value changes (when not sliding)
   useEffect(() => {
     if (!isSliding) {
       setLocalValue(
@@ -85,13 +82,11 @@ export const SliderInput = ({
     setIsSliding(false);
   };
 
-  // Format value for display with proper decimal handling
   const formatDisplayValue = (val: number) => {
     if (Number.isInteger(val)) return val.toString();
     return val.toFixed(Math.max(0, Math.log10(1 / (step || 1))));
   };
 
-  // Render current value display
   const renderValueDisplay = () => {
     if (range && Array.isArray(localValue)) {
       return (

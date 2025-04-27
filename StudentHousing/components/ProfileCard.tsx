@@ -5,14 +5,12 @@ import { View } from "tamagui";
 import { router } from "expo-router";
 import { useMemo } from "react";
 
-import ImageCollection from "./Profile/ImageCollection";
+import ImageCollection from "@/components/ImageCollection";
 import { useProfile } from "@/providers/ProfileProvider";
-import { Profile, InformationItem } from "@/typings";
+import { Profile } from "@/typings";
 import { calculateAge } from "@/utils/utils";
 
-// Define profile information handlers to process different types of information
 const profileInfoHandlers = {
-  // Handle name information
   name: {
     parse: (item) => {
       if (!item) return "";
@@ -20,22 +18,14 @@ const profileInfoHandlers = {
     },
   },
 
-  // Handle age information
   age: {
     parse: (item) => {
       if (!item) return 0;
       return calculateAge(new Date(item.value.data.value));
     },
   },
-
-  // Add more handlers for other information types as needed
-  // Example:
-  // bio: {
-  //   parse: (item) => item?.value?.data?.value || ""
-  // }
 };
 
-// Interest display component to keep JSX clean
 const InterestBadge = ({ interestName }) => (
   <View
     borderWidth="$1"
@@ -54,11 +44,9 @@ const ProfileCard = ({ profile }: ProfileCardProps) => {
   const { getInterestName } = useProfile();
   const { information, interests = [], media } = profile;
 
-  // Extract profile information using handlers
   const parsedInfo = useMemo(() => {
     const result = {};
 
-    // Process each information type with its corresponding handler
     Object.entries(information || {}).forEach(([key, item]) => {
       if (profileInfoHandlers[key]) {
         result[key] = profileInfoHandlers[key].parse(item);

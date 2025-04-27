@@ -156,9 +156,8 @@ const FilterScreen = () => {
     []
   );
 
-  // Refresh data when search mode changes - this will load the appropriate filters
   const refreshData = useCallback(async () => {
-    setSavedFilterData(await getSavedFilters()); // This now uses the search mode-specific storage key
+    setSavedFilterData(await getSavedFilters());
     setFilterData(await fetchFilters(searchMode));
   }, [searchMode]);
 
@@ -188,7 +187,6 @@ const FilterScreen = () => {
 
   const handleSearchTypeChange = (type: "accommodation" | "flatmate") => {
     setSearchMode(type);
-    // Filters will be automatically refreshed due to the dependency in refreshData
   };
 
   const RenderFilterItem = (item: Filter) => {

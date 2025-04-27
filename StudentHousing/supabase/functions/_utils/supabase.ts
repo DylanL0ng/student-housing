@@ -687,13 +687,16 @@ export const getDiscoveryProfiles = async (
 };
 
 export const getHousingRequests = async (sourceId: string) => {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("profile_interactions")
     .select("cohert1")
     .eq("cohert2", sourceId)
     .eq("type", "like");
 
-  const parsedData = data?.map((item) => item.cohert1);
+  // get array of profile ids
+  const parsedData = data?.map(
+    (profile: { cohert1: string }) => profile.cohert1
+  );
 
   const combinedUserIds = [...parsedData, sourceId];
 

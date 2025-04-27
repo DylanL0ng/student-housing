@@ -7,22 +7,90 @@ import { Profile } from "@/typings";
 import { useAuth } from "@/providers/AuthProvider";
 import Loading from "@/components/Loading";
 import { Label, ListItem, ScrollView, Tabs, Text, YGroup } from "tamagui";
-import MediaUpload from "@/components/MediaUpload";
+import MediaUpload, { ImageObject } from "@/components/MediaUpload";
 import { useViewMode } from "@/providers/ViewModeProvider";
 import { ChevronRight } from "@tamagui/lucide-icons";
 import { useProfile } from "@/providers/ProfileProvider";
 import { getCityFromCoordinates } from "../(filters)";
 
-// Profile item type handlers
-const profileItemHandlers = {
-  // Handler for interests type items
+interface ProfileContext {
+  interests: string[];
+  globalInterests: string[];
+  getInterestName: (id: string) => string;
+  amenities: string[];
+  globalAmenities: string[];
+  getAmenityName: (id: string) => string;
+  locationLabel: string | null;
+}
+
+interface ProfileItemValue {
+  data: {
+    value: any;
+  };
+}
+
+interface ProfileItem {
+  value: ProfileItemValue;
+  type?: string;
+  creation?: {
+    options: {
+      values: Array<{ id: string; label: string }>;
+    };
+  };
+}
+
+interface ProfileItemHandler {
+  getFormattedValue: (item: ProfileItem, context: ProfileContext) => string;
+  handleNavigation: (item: ProfileItem, context: ProfileContext) => void;
+}
+
+interface InputItemValue {
+  data: {
+    value: any;
+  };
+}
+
+interface SelectValue {
+  label: string;
+}
+
+interface InputItem {
+  value: InputItemValue;
+}
+
+interface InputHandler {
+  getFormattedValue: (item: InputItem) => string;
+  handleNavigation: (item: InputItem) => void;
+}
+
+interface ProfileInformationItem {
+  label: string;
+  priority_order: number;
+  editable: boolean;
+  value: any;
+}
+
+type InputType = keyof typeof inputTypeHandlers;
+type ProfileItemType = keyof typeof profileItemHandlers;
+
+interface ProfileItem {
+  type?: ProfileItemType;
+  input_type?: InputType;
+  value: {
+    data: {
+      value: any;
+    };
+  };
+}
+
+const profileItemHandlers: Record<string, ProfileItemHandler> = {
   interests: {
-    getFormattedValue: (item, { interests, getInterestName }) => {
+    getFormattedValue: (_, { interests, getInterestName }: ProfileContext) => {
       return interests.map((interest) => getInterestName(interest)).join(", ");
     },
     handleNavigation: (
-      item,
-      { interests, globalInterests, getInterestName }
+      item: ProfileItem,
+      { interests, globalInterests, getInterestName }: ProfileContext
     ) => {
       router.navigate({
         pathname: "/(main)/(profile)/select",
@@ -52,14 +120,13 @@ const profileItemHandlers = {
     },
   },
 
-  // Handler for amenities type items
   amenities: {
-    getFormattedValue: (item, { amenities, getAmenityName }) => {
+    getFormattedValue: (_, { amenities, getAmenityName }: ProfileContext) => {
       return amenities.map((amenity) => getAmenityName(amenity)).join(", ");
     },
     handleNavigation: (
-      item,
-      { amenities, globalAmenities, getAmenityName }
+      item: ProfileItem,
+      { amenities, globalAmenities, getAmenityName }: ProfileContext
     ) => {
       router.navigate({
         pathname: "/(main)/(profile)/select",
@@ -89,10 +156,12 @@ const profileItemHandlers = {
     },
   },
 
-  // Handler for location type items
   location: {
-    getFormattedValue: (item, { locationLabel }) => {
-      return locationLabel;
+    getFormattedValue: (
+      item: ProfileItem,
+      { locationLabel }: ProfileContext
+    ) => {
+      return locationLabel || "";
     },
     handleNavigation: () => {
       router.navigate({
@@ -105,11 +174,10 @@ const profileItemHandlers = {
   },
 };
 
-// Input type handlers
-const inputTypeHandlers = {
+const inputTypeHandlers: Record<string, InputHandler> = {
   text: {
-    getFormattedValue: (item) => item.value.data.value,
-    handleNavigation: (item) => {
+    getFormattedValue: (item: InputItem) => item.value.data.value,
+    handleNavigation: (item: InputItem) => {
       router.navigate({
         pathname: "/(main)/(profile)/text-input",
         params: {
@@ -120,8 +188,8 @@ const inputTypeHandlers = {
     },
   },
   slider: {
-    getFormattedValue: (item) => `€${item.value.data.value}`,
-    handleNavigation: (item) => {
+    getFormattedValue: (item: InputItem) => `€${item.value.data.value}`,
+    handleNavigation: (item: InputItem) => {
       router.navigate({
         pathname: "/(main)/(profile)/slider",
         params: {
@@ -132,8 +200,9 @@ const inputTypeHandlers = {
     },
   },
   select: {
-    getFormattedValue: (item) => `${item.value.data.value.label}`,
-    handleNavigation: (item) => {
+    getFormattedValue: (item: InputItem) =>
+      `${(item.value.data.value as SelectValue).label}`,
+    handleNavigation: (item: InputItem) => {
       router.navigate({
         pathname: "/(main)/(profile)/select",
         params: {
@@ -155,17 +224,6 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
   const [profileImages, setProfileImages] = useState<ImageObject[]>([]);
 
-  interface ProfileInformationItem {
-    label: string;
-    priority_order: number;
-    editable: boolean;
-    value: any;
-  }
-
-  interface ProfileInformation {
-    [key: string]: ProfileInformationItem;
-  }
-
   const [profileInformation, setProfileInformation] = useState<
     Array<[string, ProfileInformationItem]>
   >([]);
@@ -186,7 +244,6 @@ export default function ProfileScreen() {
 
   const { viewMode } = useViewMode();
 
-  // Create context object with all needed properties for handlers
   const profileContext = {
     interests,
     globalInterests,
@@ -215,21 +272,7 @@ export default function ProfileScreen() {
     }, [viewMode])
   );
 
-  type InputType = keyof typeof inputTypeHandlers;
-  type ProfileItemType = keyof typeof profileItemHandlers;
-
-  interface ProfileItem {
-    type?: ProfileItemType;
-    input_type?: InputType;
-    value: {
-      data: {
-        value: any;
-      };
-    };
-  }
-
   const formatProfileInformation = (item: ProfileItem) => {
-    // First check if it's a special profile type
     if (item.type && profileItemHandlers[item.type]) {
       return profileItemHandlers[item.type].getFormattedValue(
         item,
@@ -237,7 +280,6 @@ export default function ProfileScreen() {
       );
     }
 
-    // Otherwise handle by input type
     if (item.input_type && inputTypeHandlers[item.input_type]) {
       return inputTypeHandlers[item.input_type].getFormattedValue(item);
     }
@@ -246,13 +288,11 @@ export default function ProfileScreen() {
   };
 
   const handleItemPress = (item: ProfileItem) => {
-    // Handle by special type first
     if (item.type && profileItemHandlers[item.type]) {
       profileItemHandlers[item.type].handleNavigation(item, profileContext);
       return;
     }
 
-    // Otherwise handle by input type
     if (item.input_type && inputTypeHandlers[item.input_type]) {
       inputTypeHandlers[item.input_type].handleNavigation(item);
       return;
@@ -298,12 +338,15 @@ export default function ProfileScreen() {
     setProfile(profile);
     setProfileInformation(
       Object.entries(profile.information).sort(
-        (a, b) => b[1].priority_order - a[1].priority_order
+        (
+          a: [string, ProfileInformationItem],
+          b: [string, ProfileInformationItem]
+        ) => b[1].priority_order - a[1].priority_order
       )
     );
 
-    setInterests(profile?.interests || [], false);
-    setAmenities(profile?.information?.amenities?.value?.data?.value, false);
+    setInterests(profile?.interests || []);
+    setAmenities(profile?.information?.amenities?.value?.data?.value || []);
 
     setLoading(false);
   };
@@ -365,12 +408,7 @@ export default function ProfileScreen() {
                     <Label fontSize={"$6"} fontWeight={"bold"}>
                       Profile Images
                     </Label>
-                    <MediaUpload
-                      images={profileImages}
-                      onLoad={() => {}}
-                      onUpload={(image) => {}}
-                      onDelete={(image) => {}}
-                    />
+                    <MediaUpload images={profileImages} />
                   </YGroup.Item>
                   <Label fontSize={"$6"} fontWeight={"bold"}>
                     Your information
@@ -414,8 +452,47 @@ export default function ProfileScreen() {
                       />
                     </YGroup.Item>
                   )}
+                  {viewMode === "accommodation" && (
+                    <YGroup.Item>
+                      <ListItem
+                        title="Amenities"
+                        subTitle={amenities
+                          .map((a) => getAmenityName(a))
+                          .join(", ")}
+                        pressTheme
+                        iconAfter={ChevronRight}
+                        onPress={() => {
+                          router.push({
+                            pathname: "/(main)/(profile)/select",
+                            params: {
+                              item: JSON.stringify({
+                                value: {
+                                  data: {
+                                    value: amenities.map((a) => ({
+                                      id: a,
+                                      label: getAmenityName(a),
+                                    })),
+                                  },
+                                },
+                                type: "amenities",
+                                creation: {
+                                  options: {
+                                    values: globalAmenities.map((a) => ({
+                                      id: a,
+                                      label: getAmenityName(a),
+                                    })),
+                                  },
+                                },
+                              }),
+                              onReturn: "refresh",
+                            },
+                          });
+                        }}
+                      />
+                    </YGroup.Item>
+                  )}
                   {profileInformation.map(([key, item], index) =>
-                    item && item.editable ? (
+                    item && item.editable && key !== "amenities" ? (
                       <YGroup.Item key={index}>
                         <ListItem
                           title={item.label}

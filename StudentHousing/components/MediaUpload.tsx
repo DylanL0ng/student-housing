@@ -1,12 +1,10 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import { AlertDialog, Button, useTheme, View, XStack, YStack } from "tamagui";
 
 import * as ImagePicker from "expo-image-picker";
 import supabase from "@/lib/supabase";
-import { Session } from "@supabase/supabase-js";
 import { useProfile } from "@/providers/ProfileProvider";
 
 export interface ImageObject {
@@ -114,11 +112,9 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
       const existingImage = images.find((img) => img.order === order);
 
       if (existingImage) {
-        // If there's already an image in this slot, show replacement confirmation
         setImageToReplace(order);
         setReplaceModalOpen(true);
       } else {
-        // If no existing image, just pick a new one
         launchImagePicker(order);
       }
     },
@@ -126,8 +122,8 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
   );
 
   const handleDeleteImage = useCallback((image: ImageObject) => {
-    setImageToDelete(image); // Set the image to delete
-    setDeleteModalOpen(true); // Open delete modal
+    setImageToDelete(image);
+    setDeleteModalOpen(true);
   }, []);
 
   const handleImageDeleteAccept = useCallback(async () => {
@@ -138,32 +134,20 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
     );
 
     deleteImage(activeProfileId, imageToDelete);
-    setDeleteModalOpen(false); // Close modal after deleting
-    setImageToDelete(null); // Reset image to delete
-    onDelete?.(imageToDelete); // Call onDelete callback if provided
+    setDeleteModalOpen(false);
+    setImageToDelete(null);
+    onDelete?.(imageToDelete);
   }, [imageToDelete, onDelete]);
 
   const handleImageDeleteReject = useCallback(() => {
-    setDeleteModalOpen(false); // Close modal
-    setImageToDelete(null); // Reset image to delete
+    setDeleteModalOpen(false);
+    setImageToDelete(null);
   }, []);
 
   const handleImageReplaceAccept = useCallback(async () => {
     if (imageToReplace !== null) {
       launchImagePicker(imageToReplace);
     }
-
-    // const image = images.find((img) => img.order === imageToReplace);
-
-    // // await deleteImage(
-    // //   activeProfileId,
-    // //   images.find((img) => img.order === imageToReplace)
-    // // );
-
-    // // await uploadImage(
-    // //   activeProfileId,
-    // //   images.find((img) => img.order === imageToReplace)
-    // // );
 
     setReplaceModalOpen(false);
     setImageToReplace(null);
@@ -179,7 +163,6 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
     return Array.from({ length: 9 }, (_, idx) => {
       const image = imageMap.get(idx);
-
       return (
         <View
           key={`image-${idx}`}
@@ -187,9 +170,12 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
           borderWidth={"$0.5"}
           borderColor={image ? "$color" : "$color02"}
           borderStyle={image ? "solid" : "dashed"}
-          style={{
-            ...styles.cell,
-          }}
+          overflow="hidden"
+          width={"30%"}
+          height={"100%"}
+          aspectRatio={0.75}
+          borderRadius={"$4"}
+          margin="$1"
           onPress={() => handleImagePick(idx)}
         >
           {image ? (
@@ -197,10 +183,12 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
               <Image
                 cachePolicy={"none"}
                 source={image.uri}
-                style={[
-                  styles.image,
-                  { resizeMode: "cover", position: "absolute", zIndex: 0 },
-                ]}
+                style={{
+                  inset: 0,
+                  resizeMode: "cover",
+                  position: "absolute",
+                  zIndex: 0,
+                }}
               />
               <Button
                 elevate
@@ -268,7 +256,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
                 Are you sure you want to delete this image? This action cannot
                 be undone.
               </AlertDialog.Description>
-              <XStack gap="$3" justifyContent="flex-end">
+              <XStack gap="$3" content="flex-end">
                 <AlertDialog.Cancel onPress={handleImageDeleteReject} asChild>
                   <Button>Cancel</Button>
                 </AlertDialog.Cancel>
@@ -321,7 +309,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
                 Do you want to replace this image with a new one? The current
                 image will be lost.
               </AlertDialog.Description>
-              <XStack gap="$3" justifyContent="flex-end">
+              <XStack gap="$3" justify="flex-end">
                 <AlertDialog.Cancel onPress={handleImageReplaceReject} asChild>
                   <Button>Cancel</Button>
                 </AlertDialog.Cancel>
@@ -334,46 +322,13 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
         </AlertDialog.Portal>
       </AlertDialog>
 
-      <View style={styles.container}>
-        <View style={styles.wrapper}>{renderImages}</View>
+      <View flex={1} justify={"center"} items="center">
+        <View flexDirection="row" flexWrap="wrap" justify={"center"} gap={"$2"}>
+          {renderImages}
+        </View>
       </View>
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  wrapper: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 4,
-  },
-  cell: {
-    overflow: "hidden",
-    width: "30%",
-    height: 165,
-    borderRadius: 8,
-    margin: 1,
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  deleteButton: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-  },
-  addButton: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-  },
-});
 
 export default MediaUpload;

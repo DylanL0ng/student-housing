@@ -14,17 +14,6 @@ export default function TabLayout() {
   const navigation = useNavigation();
 
   const { viewMode, setViewMode } = useViewMode();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  // useEffect(() => {
-  //   if (viewMode === "accommodation" && pathname === "/") {
-  //     return router.replace("/(main)/(tabs)/requests");
-  //   }
-  //   if (viewMode === "flatmate" && pathname === "/requests") {
-  //     return router.replace("/");
-  //   }
-  // }, [viewMode, pathname]);
 
   const insets = useSafeAreaInsets();
 
@@ -49,10 +38,10 @@ export default function TabLayout() {
         ),
         tabBarButton: (props) => <Pressable {...props} />,
         tabBarIconStyle: {
-          color: theme.color02.val,
+          color: theme.color.val,
         },
         tabBarLabelStyle: {
-          color: theme.color02.val,
+          color: theme.color.val,
         },
         tabBarActiveTintColor: theme.color.val,
         headerShown: false,

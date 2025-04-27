@@ -19,7 +19,6 @@ const ImageCollection = ({
     const { locationX } = e.nativeEvent;
     const isRightSide = locationX > touchableOpacityWidth / 2;
 
-    // Go forward if right side, backward if left side
     let nextMedia = currentMedia;
     if (isRightSide) {
       nextMedia = (currentMedia + 1) % media.length;
