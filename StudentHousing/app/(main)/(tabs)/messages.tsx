@@ -71,6 +71,7 @@ export default function MessagesScreen() {
   // Use a ref to store the current message channel subscription
   const messageChannelRef = useRef<any>(null);
 
+  console.log("activeProfileId", activeProfileId);
   if (!activeProfileId) return <></>;
 
   // Function to update message subscription when conversation list changes
@@ -190,7 +191,7 @@ export default function MessagesScreen() {
   // Fetch user connections from the API
   const fetchConnections = useCallback(async () => {
     setIsLoading(true);
-
+    console.log("Fetching connections for user:", activeProfileId);
     try {
       const { data, error } = await supabase.functions.invoke(
         "getConnections",
@@ -264,6 +265,7 @@ export default function MessagesScreen() {
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
+          console.log("Received payload:", payload);
           if (payload.eventType === "INSERT") {
             const { conversation_id } = payload.new;
 
@@ -293,6 +295,8 @@ export default function MessagesScreen() {
                   },
                 }
               );
+
+              console.log("profileData", profileData);
 
               if (profileData && profileData.length > 0) {
                 const newConnection = profileData[0] as Profile;

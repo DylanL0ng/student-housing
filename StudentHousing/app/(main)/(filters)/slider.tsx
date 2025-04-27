@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Text, XStack, YStack } from "tamagui";
+import { Button, Text, XStack, YStack } from "tamagui";
 import { HeaderWithBack } from ".";
 import { Filter } from "@/typings";
 import { getSavedFilters, saveFilter } from "@/utils/filterUtils";
-import { CreationSlider } from "@/components/Inputs/Slider";
+import { SliderInput } from "@/components/Inputs/Slider";
 
 const FilterSlider = () => {
   const { item } = useLocalSearchParams();
@@ -23,14 +23,13 @@ const FilterSlider = () => {
       setFilterData(parsedItem);
 
       if (!parsedItem.options.range) {
-        console.error("Invalid filter options: range is required for slider");
         return;
       }
 
       const { range: _range, default: defaultValue } = parsedItem.options;
+
       setRange(_range);
 
-      // Set initial default values based on the filter options
       const initialState = parsedItem.options.returnRange
         ? [defaultValue || _range[0], _range[1]]
         : [defaultValue || _range[0]];
@@ -66,8 +65,8 @@ const FilterSlider = () => {
   return (
     <>
       <HeaderWithBack page={filterData.label} />
-      <YStack padding="$4" flex={1} bg="$background">
-        <CreationSlider
+      <YStack padding="$4" gap={"$4"} flex={1} bg="$background">
+        <SliderInput
           min={range[0]}
           max={range[1]}
           step={range[2]}
@@ -80,13 +79,20 @@ const FilterSlider = () => {
 
             const valueArray = Array.isArray(value) ? value : [value];
             setValues(valueArray);
-            saveFilter(
-              filterData.filter_key,
-              filterData.options.returnRange ? valueArray : value
-            );
           }}
           range={filterData.options.returnRange}
         />
+        <Button
+          pressTheme
+          onPress={() => {
+            saveFilter(
+              filterData.filter_key,
+              filterData.options.returnRange ? values : values[0]
+            );
+          }}
+        >
+          {"Save"}
+        </Button>
       </YStack>
     </>
   );

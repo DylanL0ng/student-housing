@@ -147,7 +147,7 @@ export const LocationPicker = ({
             value={[radius / 100]}
             onValueChange={(values) => setRadius(values[0] * 100)}
             min={10}
-            max={1000}
+            max={1000000}
             step={1}
             orientation="horizontal"
             size="$4"

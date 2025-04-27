@@ -35,6 +35,7 @@ const LocationScreen = () => {
   }, [location]);
 
   const handleSaveLocation = async () => {
+    console.log("Saving location:", selectedLocation);
     if (!selectedLocation) return;
 
     try {

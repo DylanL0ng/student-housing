@@ -1,39 +1,21 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { getHousingRequests } from "../_utils/supabase.ts";
+import { getHousingRequests, createResponse } from "../_utils/supabase.ts";
 
 Deno.serve(async (req) => {
   try {
     const { sourceId } = await req.json();
+
+    // Validate input parameters
     if (!sourceId) {
-      return new Response(
-        JSON.stringify({ status: "error", response: "sourceId is required" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
-      );
+      return createResponse("error", "sourceId is required");
     }
 
     const { status, response } = await getHousingRequests(sourceId);
-    return new Response(JSON.stringify({ status, response }), {
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
+    return createResponse(status === "success" ? "success" : "error", response);
   } catch (error) {
-    return new Response(
-      JSON.stringify({ status: "error", response: "FETCH_PROFILE_ERROR" }),
-      {
-        status: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
+    return createResponse(
+      "error",
+      error instanceof Error ? error.message : "An unknown error occurred"
     );
   }
 });

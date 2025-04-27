@@ -154,7 +154,21 @@ export default function ProfileScreen() {
   const [tabMode, setTabMode] = useState<"edit" | "preview">("edit");
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
   const [profileImages, setProfileImages] = useState<ImageObject[]>([]);
-  const [profileInformation, setProfileInformation] = useState<any[]>([]);
+
+  interface ProfileInformationItem {
+    label: string;
+    priority_order: number;
+    editable: boolean;
+    value: any;
+  }
+
+  interface ProfileInformation {
+    [key: string]: ProfileInformationItem;
+  }
+
+  const [profileInformation, setProfileInformation] = useState<
+    Array<[string, ProfileInformationItem]>
+  >([]);
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
 
   const {
@@ -201,9 +215,22 @@ export default function ProfileScreen() {
     }, [viewMode])
   );
 
-  const formatProfileInformation = (item) => {
+  type InputType = keyof typeof inputTypeHandlers;
+  type ProfileItemType = keyof typeof profileItemHandlers;
+
+  interface ProfileItem {
+    type?: ProfileItemType;
+    input_type?: InputType;
+    value: {
+      data: {
+        value: any;
+      };
+    };
+  }
+
+  const formatProfileInformation = (item: ProfileItem) => {
     // First check if it's a special profile type
-    if (profileItemHandlers[item.type]) {
+    if (item.type && profileItemHandlers[item.type]) {
       return profileItemHandlers[item.type].getFormattedValue(
         item,
         profileContext
@@ -211,22 +238,22 @@ export default function ProfileScreen() {
     }
 
     // Otherwise handle by input type
-    if (inputTypeHandlers[item.input_type]) {
+    if (item.input_type && inputTypeHandlers[item.input_type]) {
       return inputTypeHandlers[item.input_type].getFormattedValue(item);
     }
 
     return "Unknown format";
   };
 
-  const handleItemPress = (item) => {
+  const handleItemPress = (item: ProfileItem) => {
     // Handle by special type first
-    if (profileItemHandlers[item.type]) {
+    if (item.type && profileItemHandlers[item.type]) {
       profileItemHandlers[item.type].handleNavigation(item, profileContext);
       return;
     }
 
     // Otherwise handle by input type
-    if (inputTypeHandlers[item.input_type]) {
+    if (item.input_type && inputTypeHandlers[item.input_type]) {
       inputTypeHandlers[item.input_type].handleNavigation(item);
       return;
     }
@@ -242,7 +269,8 @@ export default function ProfileScreen() {
       },
     });
 
-    if (!data[0]) {
+    const { response, status } = data;
+    if (status === "error") {
       router.push("/(auth)/creation");
       return;
     }
@@ -252,7 +280,7 @@ export default function ProfileScreen() {
       return;
     }
 
-    const profile = data[0] as Profile;
+    const profile = response[0] as Profile;
     const media = profile.media.map((url) => {
       const split = url.split("/");
       const filename = split[split.length - 1];
@@ -274,7 +302,7 @@ export default function ProfileScreen() {
       )
     );
 
-    setInterests(profile.interests || [], false);
+    setInterests(profile?.interests || [], false);
     setAmenities(profile?.information?.amenities?.value?.data?.value, false);
 
     setLoading(false);
@@ -347,6 +375,45 @@ export default function ProfileScreen() {
                   <Label fontSize={"$6"} fontWeight={"bold"}>
                     Your information
                   </Label>
+                  {viewMode === "flatmate" && (
+                    <YGroup.Item>
+                      <ListItem
+                        title="Interests"
+                        subTitle={interests
+                          .map((i) => getInterestName(i))
+                          .join(", ")}
+                        pressTheme
+                        iconAfter={ChevronRight}
+                        onPress={() => {
+                          router.push({
+                            pathname: "/(main)/(profile)/select",
+                            params: {
+                              item: JSON.stringify({
+                                value: {
+                                  data: {
+                                    value: interests.map((i) => ({
+                                      id: i,
+                                      label: getInterestName(i),
+                                    })),
+                                  },
+                                },
+                                type: "interests",
+                                creation: {
+                                  options: {
+                                    values: globalInterests.map((i) => ({
+                                      id: i,
+                                      label: getInterestName(i),
+                                    })),
+                                  },
+                                },
+                              }),
+                              onReturn: "refresh",
+                            },
+                          });
+                        }}
+                      />
+                    </YGroup.Item>
+                  )}
                   {profileInformation.map(([key, item], index) =>
                     item && item.editable ? (
                       <YGroup.Item key={index}>
@@ -360,6 +427,23 @@ export default function ProfileScreen() {
                       </YGroup.Item>
                     ) : null
                   )}
+
+                  <YGroup.Item>
+                    <ListItem
+                      title="Location"
+                      subTitle={locationLabel}
+                      pressTheme
+                      iconAfter={ChevronRight}
+                      onPress={() => {
+                        router.push({
+                          pathname: "/(main)/(profile)/location",
+                          params: {
+                            onReturn: "refresh",
+                          },
+                        });
+                      }}
+                    />
+                  </YGroup.Item>
                 </YGroup>
               )}
             </ScrollView>

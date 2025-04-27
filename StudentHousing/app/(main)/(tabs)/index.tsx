@@ -8,9 +8,9 @@ import supabase from "@/lib/supabase";
 import { View } from "tamagui";
 import Loading from "@/components/Loading";
 import { useFocusEffect } from "expo-router";
-import { getSavedFilters } from "@/utils/filterUtils";
+import { clearFilters, getSavedFilters } from "@/utils/filterUtils";
 import { useProfile } from "@/providers/ProfileProvider";
-import { useSearchMode } from "@/providers/ViewModeProvider";
+import { useSearchMode, useViewMode } from "@/providers/ViewModeProvider";
 import generateFakeUsers from "@/scripts/generateFakeUsers";
 
 export default function HomeScreen() {
@@ -21,6 +21,8 @@ export default function HomeScreen() {
   const { interests } = useProfile();
   const { searchMode } = useSearchMode();
   const [isLoading, setIsLoading] = useState(true);
+
+  const { viewMode } = useViewMode();
 
   const requestUpdate = useCallback(async () => {
     if (!activeProfileId) return;
@@ -65,7 +67,8 @@ export default function HomeScreen() {
 
   useEffect(() => {
     requestUpdate();
-    generateFakeUsers(5);
+    // clearFilters();
+    // generateFakeUsers(5);
   }, []);
 
   useEffect(() => {
@@ -80,33 +83,28 @@ export default function HomeScreen() {
     }
 
     try {
-      const _response = await supabase.functions.invoke(
+      const { error } = await supabase.functions.invoke(
         "sendProfileInteraction",
         {
           body: {
             targetId: target.id,
             sourceId: activeProfileId,
             type: "like",
+            mode: viewMode,
           },
         }
       );
 
-      const { status, response } = _response.data;
-
-      // if (status === "success") // console.log("Interaction sent successfully.");
-      // else console.error("Error sending interaction:", status, response);
+      if (error) {
+        console.error("Error sending interaction:", error);
+        return;
+      }
     } catch (error) {
       console.error("Error sending interaction:", error);
     }
   };
 
-  const handleSwipeLeft = async ({
-    index,
-    data,
-  }: {
-    index: number;
-    data: { profile: Profile; id: string };
-  }) => {
+  const handleSwipeLeft = async ({ index }: { index: number }) => {
     const target = profiles[index];
     if (!activeProfileId) {
       console.error("User not authenticated.");
@@ -114,19 +112,22 @@ export default function HomeScreen() {
     }
 
     try {
-      const { status } = await supabase.functions.invoke(
+      const { error } = await supabase.functions.invoke(
         "sendProfileInteraction",
         {
           body: {
             targetId: target.id,
             sourceId: activeProfileId,
             type: "dislike",
+            mode: viewMode,
           },
         }
       );
 
-      // if (status === "success") // console.log("Interaction sent successfully.");
-      // else console.error("Error sending interaction:", status);
+      if (error) {
+        console.error("Error sending interaction:", error);
+        return;
+      }
     } catch (error) {
       console.error("Error sending interaction:", error);
     }

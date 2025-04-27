@@ -33,7 +33,7 @@ const RootLayout = () => {
   };
 
   useEffect(() => {
-    // generateFakeUsers(1);
+    // generateFakeUsers(5);
     handleSession(session);
   }, [session]);
 

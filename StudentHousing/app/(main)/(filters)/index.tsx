@@ -90,7 +90,6 @@ export const HeaderWithBack = ({ page = "Filters" }) => {
 };
 
 const FilterScreen = () => {
-  const navigation = useNavigation();
   const [filterData, setFilterData] = useState<Filter[]>([]);
   const [savedFilterData, setSavedFilterData] = useState<Record<string, any>>(
     {}
@@ -113,6 +112,7 @@ const FilterScreen = () => {
       return [];
     }
 
+    console.log("filters:", data);
     return data as Filter[];
   };
 

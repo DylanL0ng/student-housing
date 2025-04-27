@@ -1,5 +1,5 @@
 import { Tabs, useNavigation, useRouter } from "expo-router";
-import { Pressable } from "react-native";
+import { Platform, Pressable } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, View } from "@tamagui/core";
@@ -39,7 +39,7 @@ export default function TabLayout() {
       screenOptions={({ route }) => ({
         tabBarStyle: {
           borderTopWidth: 0,
-          height: insets.bottom + 40,
+          height: insets.bottom + (Platform.OS === "android" ? 60 : 40),
         },
         tabBarBackground: () => (
           <View

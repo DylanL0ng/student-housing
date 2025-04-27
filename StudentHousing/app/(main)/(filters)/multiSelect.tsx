@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState, useRef } from "react";
-import { Checkbox, ListItem, YStack } from "tamagui";
+import { Button, Checkbox, ListItem, YStack } from "tamagui";
 import { Check as CheckIcon } from "@tamagui/lucide-icons";
 import { Filter } from "@/typings";
 import { HeaderWithBack } from ".";
-import { getSavedFilters, saveFilter } from "@/utils/filterUtils";
+import { clearFilters, getSavedFilters, saveFilter } from "@/utils/filterUtils";
 
 const MultiSelect: React.FC = () => {
   const { item } = useLocalSearchParams();
@@ -14,25 +14,14 @@ const MultiSelect: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>(
     {}
   );
-  const isMounted = useRef(true);
-  const pendingSave = useRef<Promise<void> | null>(null);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!isMounted.current) return;
-
       try {
         const savedFilters = await getSavedFilters();
         const savedValue = savedFilters[filter.filter_key];
 
-        if (savedValue && isMounted.current) {
+        if (savedValue) {
           setSelectedItems(savedValue);
         }
       } catch (error) {
@@ -40,34 +29,23 @@ const MultiSelect: React.FC = () => {
       }
     };
 
+    // clearFilters();
     fetchData();
   }, [filter.filter_key]);
 
-  const handleCheckboxChange = async (itemLabel: string, checked: boolean) => {
-    if (!isMounted.current) return;
-
-    const newSelectedItems = { ...selectedItems, [itemLabel]: checked };
+  const handleCheckboxChange = async (itemId: string, checked: boolean) => {
+    const newSelectedItems = { ...selectedItems, [itemId]: checked };
     setSelectedItems(newSelectedItems);
-
-    // If there's a pending save, wait for it to complete
-    if (pendingSave.current) {
-      await pendingSave.current;
-    }
-
-    // Create a new save operation
-    pendingSave.current = saveFilter(filter.filter_key, newSelectedItems);
-    await pendingSave.current;
-    pendingSave.current = null;
   };
 
-  const RenderCheckbox = (itemLabel: string) => {
+  const RenderCheckbox = (itemId: string) => {
     return (
       <Checkbox
         size="$4"
         onCheckedChange={(checked: boolean) =>
-          handleCheckboxChange(itemLabel, checked)
+          handleCheckboxChange(itemId, checked)
         }
-        checked={selectedItems[itemLabel] || false}
+        checked={selectedItems[itemId] || false}
       >
         <Checkbox.Indicator>
           <CheckIcon />
@@ -89,15 +67,24 @@ const MultiSelect: React.FC = () => {
       >
         {Object.entries(filter.options.values || {}).map(([_, item]: any) => (
           <ListItem
-            key={item.label}
+            key={item.id}
             onPress={() =>
-              handleCheckboxChange(item.label, !selectedItems[item.label])
+              handleCheckboxChange(item.id, !selectedItems[item.id])
             }
             pressTheme
             title={item.label}
-            iconAfter={() => RenderCheckbox(item.label)}
+            iconAfter={() => RenderCheckbox(item.id)}
           />
         ))}
+
+        <Button
+          pressTheme
+          onPress={() => {
+            saveFilter(filter.filter_key, selectedItems);
+          }}
+        >
+          {"Save"}
+        </Button>
       </YStack>
     </>
   );

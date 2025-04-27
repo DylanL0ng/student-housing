@@ -107,7 +107,6 @@ const CreateScreen = () => {
       }
 
       const filteredData = data.filter((item) => item && item.creation);
-      console.log("Fetched data:", filteredData);
 
       const sortedData = filteredData.sort(
         (a, b) => b.priority_order - a.priority_order
@@ -302,31 +301,17 @@ const CreateScreen = () => {
         }
       );
 
-      console.log(
-        "answers",
-        parsedAnswers.map(([key, value]) => {
-          return {
-            profile_id: activeProfileId,
-            value: processAnswer(key, value),
-            key,
-            view: viewMode,
-          };
-        })
-      );
       const { data, error } = await supabase.from("profile_information").upsert(
         parsedAnswers.map(([key, value]) => {
           return {
             profile_id: activeProfileId,
             value: processAnswer(key, value),
             key,
-            view: viewMode,
+            // view: viewMode,
           };
         })
       );
 
-      // console.log(data, error);
-
-      console.log("1");
       // handle location
       const location = newAnswers["location"]?.value;
       if (location) {
@@ -348,7 +333,6 @@ const CreateScreen = () => {
         }
       }
 
-      console.log("2");
       // handle interests
       const interests = newAnswers["interests"]?.value;
       if (interests) {
@@ -404,7 +388,7 @@ const CreateScreen = () => {
   return (
     <View bg="$background" style={{ flex: 1 }}>
       <View style={{ width: "100%", backgroundColor: "black" }}>
-        <Progress value={(questionIndex / questions.length) * 100}>
+        <Progress value={Math.floor((questionIndex / questions.length) * 100)}>
           <Progress.Indicator animation={"medium"} />
         </Progress>
       </View>

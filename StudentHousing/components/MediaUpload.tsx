@@ -70,7 +70,6 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
   const { activeProfileId } = useProfile();
 
-  // Load default images on mount
   useEffect(() => {
     setImages(defaultImages);
     if (onLoad) onLoad();
@@ -154,17 +153,17 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
       launchImagePicker(imageToReplace);
     }
 
-    const image = images.find((img) => img.order === imageToReplace);
+    // const image = images.find((img) => img.order === imageToReplace);
 
-    // await deleteImage(
-    //   activeProfileId,
-    //   images.find((img) => img.order === imageToReplace)
-    // );
+    // // await deleteImage(
+    // //   activeProfileId,
+    // //   images.find((img) => img.order === imageToReplace)
+    // // );
 
-    // await uploadImage(
-    //   activeProfileId,
-    //   images.find((img) => img.order === imageToReplace)
-    // );
+    // // await uploadImage(
+    // //   activeProfileId,
+    // //   images.find((img) => img.order === imageToReplace)
+    // // );
 
     setReplaceModalOpen(false);
     setImageToReplace(null);
@@ -352,10 +351,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
+    gap: 4,
   },
   cell: {
     overflow: "hidden",
-    width: "32.81%",
+    width: "30%",
     height: 165,
     borderRadius: 8,
     margin: 1,

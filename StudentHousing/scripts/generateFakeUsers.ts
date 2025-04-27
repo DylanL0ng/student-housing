@@ -18,10 +18,7 @@ const INTERESTS = [
   "df7dc5d1-29a7-4e88-abd6-d0a81a65f7fb",
 ];
 
-const AMENITIES = [
-  "939a39cb-65ed-4d32-9f61-4a21fa7c3208",
-  "8ea30d73-a3bd-4577-845d-55763864f449",
-];
+const AMENITIES = ["internet", "public transport"];
 
 const DEV_ID = "7edf42e0-d865-46c9-986a-0560837a02bc";
 const MIN_BUDGET = 1000;
@@ -57,7 +54,6 @@ const createAccommodationProfileInformation = (
     profile_id: profileId,
     key: "name",
     value: { data: { value: name } },
-    view: "accommodation",
   },
   {
     profile_id: profileId,
@@ -65,13 +61,11 @@ const createAccommodationProfileInformation = (
     value: {
       data: { value: faker.number.int({ min: MIN_BUDGET, max: MAX_BUDGET }) },
     },
-    view: "accommodation",
   },
   {
     profile_id: profileId,
     key: "amenities",
     value: { data: { value: [...AMENITIES] } },
-    view: "accommodation",
   },
 ];
 
@@ -83,7 +77,6 @@ const createFlatmateProfileInformation = (
     profile_id: profileId,
     key: "name",
     value: { data: { value: name } },
-    view: "flatmate",
   },
   {
     profile_id: profileId,
@@ -91,31 +84,26 @@ const createFlatmateProfileInformation = (
     value: {
       data: { value: faker.number.int({ min: MIN_BUDGET, max: MAX_BUDGET }) },
     },
-    view: "flatmate",
   },
   {
     profile_id: profileId,
     key: "university",
     value: { data: { value: { id: "tud", label: "TUDublin" } } },
-    view: "flatmate",
   },
   {
     profile_id: profileId,
     key: "biography",
     value: { data: { value: faker.lorem.paragraph(2) } },
-    view: "flatmate",
   },
   {
     profile_id: profileId,
     key: "gender",
     value: { data: { value: ["male"] } },
-    view: "flatmate",
   },
   {
     profile_id: profileId,
     key: "age",
     value: { data: { value: faker.date.birthdate() } },
-    view: "flatmate",
   },
 ];
 
@@ -238,6 +226,10 @@ const createFakeFlatmate = async (userId: string) => {
 const createFakeAccommodation = async (userId: string) => {
   const name = faker.company.name();
 
+  console.log(
+    "Creating accommodation profile information",
+    createAccommodationProfileInformation(userId, name)
+  );
   await supabase
     .from("profile_information")
     .upsert(createAccommodationProfileInformation(userId, name));
@@ -259,10 +251,10 @@ const createFakeAccommodation = async (userId: string) => {
 // Main Export
 export default async function generateFakeUsers(numUsers: number) {
   const results = [];
-
   for (let i = 0; i < numUsers; i++) {
+    console.log(`Creating user ${i + 1} of ${numUsers}`);
     results.push(await createFakeUser());
+    console.log(`User ${i + 1} created`);
   }
-
   return results;
 }

@@ -30,34 +30,17 @@ export const CreationInputFactory = ({
   state,
 }: CreationInputFactoryProps) => {
   const { session } = useAuth();
-  const { activeProfileId, globalInterests, getInterestName } = useProfile();
+  const {
+    activeProfileId,
+    globalInterests,
+    globalAmenities,
+    getInterestName,
+    getAmenityName,
+  } = useProfile();
+
+  console.log("CreationInputFactory", question.key, question.type);
+
   const [inputState, setInputState] = state;
-  const [registryOptions, setRegistryOptions] = useState<MultiSelectOptions[]>(
-    []
-  );
-
-  // Fetch registry options when needed
-  useEffect(() => {
-    if (question.type === "multiSelect" && question.registry) {
-      fetchRegistryOptions(question.registry);
-    }
-  }, [question.type, question.registry]);
-
-  // Fetch data from registry
-  const fetchRegistryOptions = async (registry: string) => {
-    try {
-      const { data, error } = await supabase.from(registry).select("id, label");
-
-      if (error) {
-        console.error("Error fetching registry data:", error);
-        return;
-      }
-
-      setRegistryOptions(data || []);
-    } catch (error) {
-      console.error("Registry fetch error:", error);
-    }
-  };
 
   // Load images for media type inputs
   const loadImages = useCallback(async () => {
@@ -126,6 +109,25 @@ export const CreationInputFactory = ({
     );
   }
 
+  if (question.key === "amenities") {
+    return (
+      <MultiSelect
+        options={globalAmenities.map((id) => ({
+          id,
+          label: getAmenityName(id),
+        }))}
+        value={inputState.multiSelect || []}
+        onChange={(value) => {
+          setInputState({
+            ...inputState,
+            multiSelect: value,
+          });
+        }}
+        singleSelect={false}
+      />
+    );
+  }
+
   // Update state utility function to avoid repetition
   const updateInputState = (field: string, value: any) => {
     setInputState({
@@ -151,7 +153,7 @@ export const CreationInputFactory = ({
 
     case "multiSelect": {
       const multiSelectOptions = question.options as MultiSelectOptions[];
-      const options = question.registry ? registryOptions : multiSelectOptions;
+      const options = multiSelectOptions;
 
       return (
         <MultiSelect

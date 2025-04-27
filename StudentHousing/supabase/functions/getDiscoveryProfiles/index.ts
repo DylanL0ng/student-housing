@@ -1,20 +1,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { getDiscoveryProfiles } from "../_utils/supabase.ts";
+import { getDiscoveryProfiles, createResponse } from "../_utils/supabase.ts";
 
 Deno.serve(async (req) => {
   try {
     const { sourceId, filters, type } = await req.json();
     if (!sourceId) {
-      return new Response(
-        JSON.stringify({ status: "error", response: "sourceId is required" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
-      );
+      return createResponse("error", "Source ID is required");
+    }
+    if (!type) {
+      return createResponse("error", "Type is required");
     }
 
     const { status, response } = await getDiscoveryProfiles(
@@ -22,22 +16,12 @@ Deno.serve(async (req) => {
       filters,
       type
     );
-    return new Response(JSON.stringify({ status, response }), {
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
+
+    return createResponse(status === "success" ? "success" : "error", response);
   } catch (error) {
-    return new Response(
-      JSON.stringify({ status: "error", response: "FETCH_PROFILE_ERROR" }),
-      {
-        status: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
+    return createResponse(
+      "error",
+      error instanceof Error ? error.message : "An unknown error occurred"
     );
   }
 });

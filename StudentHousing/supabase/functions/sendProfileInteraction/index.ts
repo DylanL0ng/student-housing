@@ -1,59 +1,28 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { likeUser, dislikeUser } from "../_utils/supabase.ts";
+import { likeUser, dislikeUser, createResponse } from "../_utils/supabase.ts";
 
 Deno.serve(async (req) => {
   try {
     const { targetId, sourceId, type, mode } = await req.json();
+    // Validate input parameters
     if (!targetId) {
-      return new Response(
-        JSON.stringify({ status: "error", response: "User ID is required" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
-      );
+      return createResponse("error", "User ID is required");
     }
 
     if (!sourceId) {
-      return new Response(
-        JSON.stringify({ status: "error", response: "Source is required" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
-      );
+      return createResponse("error", "Source ID is required");
     }
 
     if (!type) {
-      return new Response(
-        JSON.stringify({ status: "error", response: "Type is required" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
-      );
+      return createResponse("error", "Type is required");
+    }
+
+    if (!mode) {
+      return createResponse("error", "Mode is required");
     }
 
     if (!["like", "dislike"].includes(type)) {
-      return new Response(
-        JSON.stringify({ status: "error", response: "Invalid type" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
-      );
+      return createResponse("error", "Type must be 'like' or 'dislike'");
     }
 
     let response;
@@ -63,28 +32,14 @@ Deno.serve(async (req) => {
       response = await dislikeUser(targetId, sourceId, mode);
     }
 
-    return new Response(JSON.stringify(response), {
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "max-age=300",
-      },
-    });
+    return createResponse(
+      response?.status === "success" ? "success" : "error",
+      response?.response
+    );
   } catch (error) {
-    console.error("User data fetch error:", error);
-    return new Response(
-      JSON.stringify({
-        error:
-          error instanceof Error ? error.message : "An unknown error occurred",
-        code: "USER_DATA_FETCH_ERROR",
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
+    return createResponse(
+      "error",
+      error instanceof Error ? error.message : "An unknown error occurred"
     );
   }
 });

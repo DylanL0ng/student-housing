@@ -1,34 +1,25 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { getUserData } from "../_utils/supabase.ts";
+import { getUserData, createResponse } from "../_utils/supabase.ts";
 Deno.serve(async (req) => {
   try {
-    const { userId, minimal, mode } = await req.json();
+    const { userId, sourceId, minimal, mode } = await req.json();
+
+    // Validate input parameters
+    if (!userId) {
+      return createResponse("error", "User ID is required");
+    }
+
     const userDataResult = await getUserData([userId], {
       minimal,
-      mode,
+      sourceId,
+      type: mode,
     });
-    return new Response(JSON.stringify(userDataResult), {
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "max-age=300",
-      },
-    });
+
+    return createResponse("success", userDataResult);
   } catch (error) {
-    console.error("User data fetch error:", error);
-    return new Response(
-      JSON.stringify({
-        error:
-          error instanceof Error ? error.message : "An unknown error occurred",
-        code: "USER_DATA_FETCH_ERROR",
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
+    return createResponse(
+      "error",
+      error instanceof Error ? error.message : "An unknown error occurred"
     );
   }
 });

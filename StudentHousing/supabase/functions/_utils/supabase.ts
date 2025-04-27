@@ -1,7 +1,6 @@
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient, PostgrestError } from "jsr:@supabase/supabase-js@2";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const SAVED_PROMPTS: Record<string, string> = {};
 const GLOBAL_INTEREST_LIST: string[] = [];
 const supabaseUrl = Deno.env.get("SUPABASE_URL");
 const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -18,7 +17,25 @@ export interface Profile {
   };
   information: [];
   media: string[];
+  profile_interests: {
+    interest_registry: { id: string };
+  }[];
+  conversation_members: {
+    conversation_id: string;
+    user_id: string;
+    conversation_registry?: {
+      conversation_messages: {
+        content: string;
+        status: string;
+        sender_id: string;
+        created_at: string;
+        message_id: string;
+      }[];
+    };
+  }[];
 }
+
+export type ProfileType = "flatmate" | "accommodation";
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Supabase credentials not configured");
@@ -26,89 +43,49 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const getPromptLabel = async (prompt_id: string) => {
-  if (SAVED_PROMPTS[prompt_id]) return SAVED_PROMPTS[prompt_id];
-  const { data: promptData, error: promptError } = await supabase
-    .from("prompt_registry")
-    .select("prompt")
-    .eq("id", prompt_id)
-    .single();
-  if (promptError) {
-    console.error("Error fetching prompt label:", promptError);
-    return;
-  }
-  if (!promptData) {
-    console.error("No prompt data found");
-    return;
-  }
-  SAVED_PROMPTS[prompt_id] = promptData.prompt;
-  return promptData.prompt;
-};
-
-export const getAllPrompts = async () => {
-  const { data: promptData, error: promptError } = await supabase
-    .from("prompt_registry")
-    .select("id, prompt");
-  if (promptError) {
-    console.error("Error fetching all prompts:", promptError);
-    return;
-  }
-  if (!promptData) {
-    console.error("No prompt data found");
-    return;
-  }
-  const prompts = promptData.reduce(
-    (acc: Record<string, string>, prompt: { prompt: string; id: string }) => {
-      acc[prompt.id] = prompt.prompt;
-      SAVED_PROMPTS[prompt.id] = prompt.prompt;
-      return acc;
-    },
-    {}
-  );
-
-  return prompts;
-};
-
 export const getMediaUrls = async (userIds: string[]) => {
   const mediaMap: Record<string, string[]> = {};
 
+  // run the function in parallel for all user IDs
   await Promise.all(
     userIds.map(async (id) => {
+      // fetch the list of images for each user
       const { data: mediaData, error: mediaError } = await supabase.storage
         .from("profile-images")
         .list(id);
 
-      // console.log("Media data for user:", id, mediaData, mediaError);
-
+      // if no media found, or error occurred, set empty array
       if (mediaError || !mediaData || mediaData.length === 0) {
-        mediaMap[id] = [];
-        return;
+        return (mediaMap[id] = []);
       }
 
       const urls = await Promise.all(
         mediaData.map(async (media: { name: string }) => {
+          // fetch the public URL for each media item per user
           const { data: profileData, error: profileError } =
             await supabase.storage
               .from("profile-images")
               .getPublicUrl(`${id}/${media.name}`);
 
           if (profileError) {
-            console.error(
+            return console.warn(
               `Error fetching public URL for media: ${media.name}`,
               profileError
             );
-            return null;
           }
+
+          // return the public URL if it exists
           return profileData?.publicUrl;
         })
       );
 
+      // filter out any null URLs
       mediaMap[id] = urls.filter((url: string) => url !== null);
     })
   );
 
-  // console.log("Media URLs fetched:", mediaMap);
-
+  // return the media map with user IDs as keys and
+  // their media URLs as values
   return mediaMap;
 };
 
@@ -117,37 +94,32 @@ const constructProfile = (
   mediaUrls: Record<string, string[]>,
   { minimal = false }: { minimal?: boolean }
 ) => {
-  // console.log("Constructing profile for user data:", userData);
-  const media = mediaUrls[userData.id];
-  if (!media || media.length === 0) {
-    console.error("No media found for user:", userData.id);
-    return null;
-  }
+  const media = mediaUrls[userData.id] || [];
+
+  // partial allows us to create an object with
+  // only the properties we need
   const data: Partial<Profile> = {};
 
+  // if minimal is true, we need to get the conversation
+  // if minimal is false, we need to get the profile interests
+  // and location.
   if (minimal) {
-    data["conversations"] = userData.conversations;
+    data["conversations"] = userData?.conversations;
   } else {
     data["interests"] =
       userData.profile_interests?.map(
         (interest: { interest_registry: { id: string } }) =>
-          interest.interest_registry.id
+          interest?.interest_registry?.id
       ) || [];
     data["location"] = {
-      point: userData.profile_locations.point,
-      distance: userData.profile_locations.distance,
+      point: userData.profile_locations?.point || { longitude: 0, latitude: 0 },
+      distance: userData.profile_locations?.distance || 0,
     };
   }
 
-  // data["information"] = userData.profile_information.map((item) => {
-  //   return {
-  //     key: item.key,
-  //     value: item.value,
-  //     label: item.profile_information_registry.label,
-  //     priority_order: item.profile_information_registry.priority_order,
-  //   };
-  // });
-
+  // convert the profile information to a hash map
+  // with the key as the profile information registry key
+  // and the value as the profile information value
   data["information"] = userData.profile_information.reduce(
     (acc: any, item: any) => {
       acc[item.key] = {
@@ -162,18 +134,97 @@ const constructProfile = (
       };
       return acc;
     },
-    {} // Initial accumulator as empty object
+    {}
   );
 
-  console.log("Constructed profile data:", data);
-
+  // construct the profile object with the user data
+  // and the media URLs
   return {
-    id: userData.id,
-    title: userData.full_name,
-    type: userData.type,
-    media: media,
+    id: userData?.id || "",
+    title: userData?.full_name || "No Name",
+    type: userData?.type || "unknown",
+    media: media || [],
     ...data,
   } as Profile;
+};
+
+export const createResponse = (status: "success" | "error", response: any) => {
+  return new Response(JSON.stringify({ status: status, response: response }), {
+    status: status === "success" ? 200 : 500,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+};
+
+const recommenderService = async (userData: Profile[], sourceId: string) => {
+  // if the global interest list is empty, we need to get the
+  // interest registry from the database and sort it
+  // by the id of the interest registry
+  if (GLOBAL_INTEREST_LIST.length === 0) {
+    const { data: interestData, error: interestError } = await supabase
+      .from("interest_registry")
+      .select("id");
+
+    if (interestError) {
+      return { status: "error", response: interestError };
+    }
+
+    const parsedData = interestData?.map((item: { id: string }) => item.id);
+    const sortedGlobalIds = parsedData?.sort((a: string, b: string) =>
+      a.localeCompare(b)
+    );
+
+    GLOBAL_INTEREST_LIST.push(...sortedGlobalIds);
+  }
+
+  const vectorise = (userInterests: string[]) => {
+    // convert the interests to a vector of 0s and 1s
+    // 1 if the user has the interest, 0 otherwise
+    return GLOBAL_INTEREST_LIST.map((id) =>
+      userInterests.includes(id) ? 1 : 0
+    );
+  };
+
+  const dot = (a: number[], b: number[]) =>
+    // calculate the dot product of two vectors
+    a.reduce((acc, val, i) => acc + val * b[i], 0);
+
+  const magnitude = (vec: number[]) =>
+    // calculate the magnitude of a vector
+    Math.sqrt(vec.reduce((acc, val) => acc + val * val, 0));
+
+  const cosineSimilarity = (a: number[], b: number[]) =>
+    // calculate the cosine similarity between two vectors
+    dot(a, b) / (magnitude(a) * magnitude(b));
+
+  const sourceProfile = userData.find((u) => u.id === sourceId);
+
+  const sourceVector = vectorise(
+    sourceProfile?.profile_interests.map((i) => i.interest_registry.id) ?? []
+  );
+
+  // sort the user data by the similarity score
+  // and return the top 10 most similar users
+  const mostSimilarUsers = userData
+    .map((user) => {
+      if (user.id === sourceId) return null;
+
+      const targetVector = vectorise(
+        user.profile_interests.map((i) => i.interest_registry.id)
+      );
+
+      return {
+        ...user,
+        similarity: cosineSimilarity(sourceVector, targetVector),
+      };
+    })
+    .filter((user) => user !== null)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, 10);
+
+  return mostSimilarUsers;
 };
 
 export const getUserData = async (
@@ -184,24 +235,26 @@ export const getUserData = async (
     sourceId,
     recommender,
     type = "flatmate",
-    filters,
   }: {
     minimal?: boolean;
     exclude?: boolean;
     sourceId?: string;
     recommender?: boolean;
-    filters?: Record<string, any>;
-    type?: "flatmate" | "accommodation";
+    type?: ProfileType;
   } = {}
 ) => {
   if (typeof userId === "string") {
     userId = [userId];
   }
-  console.log("Fetching user data for IDs:", userId, minimal);
-  //   if minimal is true we only return data that is needed for inital loading
-  //   if minimal is false we return all data
 
-  // FIX: Add proper spacing and remove trailing comma at the end of the query
+  // if minimal is true, we need to get the conversation
+  // members and messages and the profile information with
+  // the profile information registry
+
+  // if minimal is false, we need to get the profile interests
+  // and locations and the profile information with the profile
+  // information registry
+
   const getUserDataQuery = minimal
     ? `
       conversation_members!user_id(
@@ -220,7 +273,7 @@ export const getUserData = async (
           label, priority_order, type, input_type, editable, creation
         )
       )
-    `
+    `.trim()
     : `
       profile_information!profile_id(
         *, 
@@ -232,123 +285,81 @@ export const getUserData = async (
         interest_registry!id(id)
       ),
       profile_locations!profile_id(point)
-    `;
+    `.trim();
 
   let userData, userError;
   if (exclude) {
-    // Get user data for all users except the given user IDs
-    console.log("Excluding user IDs:", userId);
+    console.log("Getting user data for exclude:", userId, type);
+    // if exclude is true, we need to get the user ids of the
+    // users that are not in the exclude list
     const { data: _userData, error: _userError } = await supabase
       .from("profile_mapping")
       .select(
         `
-          type,
-          id,
-          ${getUserDataQuery}
-        `
+        type,
+        id,
+        ${getUserDataQuery}
+      `
       )
       .filter("id", "not.in", `(${userId.join(",")})`)
       .filter("type", "eq", type);
     userData = _userData;
     userError = _userError;
   } else {
-    // Get user data for the given user IDs
+    console.log("Getting user data for include:", userId, type);
+    // if exclude is false, we need to get the user ids of the
+    // users that are in the include list
     const { data: _userData, error: _userError } = await supabase
       .from("profile_mapping")
       .select(
         `
-          type,
-          id,
-          ${getUserDataQuery}
-        `
+        type,
+        id,
+        ${getUserDataQuery}
+      `
       )
       .filter("type", "eq", type)
       .in("id", userId);
-    console.log("getting mapping", type, userId, _userData);
+
     userData = _userData;
     userError = _userError;
   }
 
-  console.log("User data fetched:", userData, userError);
+  console.log("User data:", userData, userError);
 
-  if (recommender) {
-    if (GLOBAL_INTEREST_LIST.length === 0) {
-      const { data: interestData, error: interestError } = await supabase
-        .from("interest_registry")
-        .select("id");
-
-      if (interestError) {
-        return console.error(
-          "Error fetching interest registry:",
-          interestError
-        );
-      }
-
-      GLOBAL_INTEREST_LIST.push(...interestData.map((interest) => interest.id));
-    }
-
-    const vectorize = (userInterests: string[]) => {
-      const vector = GLOBAL_INTEREST_LIST.map((id) =>
-        userInterests.includes(id) ? 1 : 0
-      );
-      return vector;
-    };
-
-    const dot = (a: number[], b: number[]) =>
-      a.reduce((acc, val, i) => acc + val * b[i], 0);
-
-    const magnitude = (vec: number[]) =>
-      Math.sqrt(vec.reduce((acc, val) => acc + val * val, 0));
-
-    const cosineSimilarity = (a: number[], b: number[]) =>
-      dot(a, b) / (magnitude(a) * magnitude(b));
-
-    const sourceProfile = userData.find((u) => u.id === sourceId);
-
-    const sourceVector = vectorize(
-      sourceProfile?.profile_interests.map((i) => i.interest_registry.id)
-    );
-
-    userData = userData
-      .map((user) => {
-        const targetVector = vectorize(
-          user.profile_interests.map((i) => i.interest_registry.id)
-        );
-
-        return {
-          ...user,
-          similarity:
-            user.id === sourceId
-              ? 0
-              : cosineSimilarity(sourceVector, targetVector),
-        };
-      })
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, 10);
+  // if recommender is true, we need to get the most similar users
+  // based on the interests of the user
+  if (recommender && sourceId) {
+    const mostSimilarUsers = await recommenderService(userData, sourceId);
+    userData = mostSimilarUsers;
   }
 
   if (!userData || userData.length === 0) {
-    console.error("No user data found:", userError);
+    console.warn("No user data found:", userError);
     return [];
   }
 
-  if (exclude) userId = userData.map((user) => user.id);
+  // if exclude is true, we need to get the user ids of the
+  // users that are not in the exclude list
+  if (exclude) userId = userData.map((profile: Profile) => profile.id);
 
-  // console.log("User data fetched:", userData);
-  // Get media URLs for all users
-  const mediaUrls = await getMediaUrls(userId);
+  const mediaUrls = await getMediaUrls(
+    Array.isArray(userId) ? userId : [userId]
+  );
 
-  return userData?.map((profile) => {
+  const usersData = userData.map((profile: Profile) => {
     if (minimal) {
-      // Only return conversations with the source user involved
-      const members = profile.conversation_members.filter((member) => {
-        return member.user_id !== sourceId;
-      });
+      // filter out the sourceId from the conversation members
+      const members =
+        profile.conversation_members?.filter((member) => {
+          return member.user_id !== sourceId;
+        }) ?? [];
 
-      // Extract conversations and latest messages
+      // process conversations and messages sort the messages
+      // by created_at timestamp in descending order
       const conversations = members.map((member) => {
         const messages =
-          member.conversation_registry.conversation_messages || [];
+          member.conversation_registry?.conversation_messages || [];
 
         const sortedMessages = [...messages].sort((a, b) => {
           return (
@@ -363,24 +374,40 @@ export const getUserData = async (
         };
       });
 
-      return constructProfile({ ...profile, conversations }, mediaUrls, {
-        minimal,
-      });
+      // construct the profile with conversations
+      const constructedProfile = constructProfile(
+        { ...profile, conversations },
+        mediaUrls,
+        {
+          minimal,
+        }
+      );
+
+      return constructedProfile;
     } else {
-      return constructProfile(profile, mediaUrls, {
+      // construct the profile without conversations
+      const constructedProfile = constructProfile(profile, mediaUrls, {
         minimal,
       });
+
+      return constructedProfile;
     }
   });
+
+  return usersData;
 };
 
 export const getConnectedUserIds = async (
   userId: string,
-  mode: "accommodation" | "flatmate" = 'flatmate',
-  type: "accommodation" | "flatmate" = "flatmate"
+  mode: ProfileType = "flatmate",
+  type: ProfileType = "flatmate"
 ) => {
+  // get the connected user ids from the connections table
   let query = supabase.from("connections").select(`cohert2, cohert1`);
 
+  // if the mode is accommodation, we need to get the
+  // connected user ids for the accommodation type
+  // otherwise we need to get the connected user ids for the flatmate type
   if (mode === "accommodation") {
     query = query.eq("cohert1", userId).eq("type", "flatmate");
   } else {
@@ -400,6 +427,8 @@ export const getConnectedUserIds = async (
     return { status: "success", response: [] };
   }
 
+  // get the connected user ids from the connections table
+  // if the userId is in cohert1, we need to get the cohert2
   const connectedUserIds = connections.map((connection) => {
     return connection.cohert1 === userId
       ? connection.cohert2
@@ -410,11 +439,19 @@ export const getConnectedUserIds = async (
 };
 
 export const getLikedUserIds = async (userId: string) => {
+  // get all the users that have liked the given userId
+  // from the profile_interactions table
+
+  interface LikeData {
+    cohert2: string;
+  }
+
   const { data: likeData, error: likeError } = await supabase
     .from("profile_interactions")
     .select("cohert2")
-    .eq("cohert1", userId);
-  // .eq("type", "like")
+    .eq("cohert1", userId)
+    .eq("type", "like");
+
   if (likeError) {
     return { status: "error", response: likeError };
   }
@@ -423,14 +460,15 @@ export const getLikedUserIds = async (userId: string) => {
     return { status: "success", response: [] };
   }
 
-  const likedUserIds = likeData.map((like) => like.cohert2);
+  // return a list of ids
+  const likedUserIds = likeData.map((user: LikeData) => user.cohert2);
   return { status: "success", response: likedUserIds };
 };
 
 export const getLocationFilteredUserIds = async (
   filters: Record<string, any>,
   excludeUserIds: string[] = [],
-  userType: "flatmate" | "accommodation" = "flatmate"
+  userType: ProfileType = "flatmate"
 ): Promise<string[]> => {
   // If we have a location filter
   const { latitude, longitude, range } = filters.location;
@@ -450,81 +488,194 @@ export const getLocationFilteredUserIds = async (
     console.error("Error applying location filter:", locationError);
   }
 
+  // get the user ids from the location data
   return locationData.map((user: { id: string }) => user.id);
 };
 
 export const getFilteredUserIds = async (
   filters: Record<string, any>,
   excludeUserIds: string[] = [],
-  mode: "accommodation" | "flatmate"
+  mode: ProfileType
 ) => {
-  // const locationFilteredUserIds = await getLocationFilteredUserIds(
-  //   filters,
-  //   excludeUserIds,
-  //   mode
-  // );
+  // filter by location and distance
+  const locationFilteredUserIds = await getLocationFilteredUserIds(
+    filters,
+    excludeUserIds,
+    mode
+  );
 
-  // filtering out age rn for testing
+  // remove the location filter from the filters object
+  // as its already applied
   const parsedFilters = Object.entries(filters).filter(
     ([key, value]) => key !== "location" && value !== null
   );
 
-  let query = supabase.from("profile_information").select("profile_id");
-  parsedFilters.forEach(([key, value]) => {
-    if (key === "budget") {
-      // Range filter
-      // console.log("Range filter:", key, min, max);
-      const [min, max] = value;
-      query = query
-        .eq("key", key)
-        .gte(`value->data->value`, min)
-        .lte(`value->data->value`, max);
-      // .in("profile_id", locationFilteredUserIds);
+  const filterPromises: Promise<{ data: { profile_id: string }[] }>[] = [];
+
+  for (const [key, value] of parsedFilters) {
+    switch (key) {
+      case "age": {
+        // convert the age range to birthdate range
+        // query the database for profiles with birthdates
+        // within the range of the given age
+
+        const [minAge, maxAge] = value;
+        const today = new Date();
+
+        const minBirthdate = new Date(
+          today.getFullYear() - maxAge,
+          today.getMonth(),
+          today.getDate()
+        ).toISOString();
+
+        const maxBirthdate = new Date(
+          today.getFullYear() - minAge,
+          today.getMonth(),
+          today.getDate()
+        ).toISOString();
+
+        filterPromises.push(
+          supabase
+            .rpc("filter_profiles_by_age", {
+              min_birthdate: minBirthdate,
+              max_birthdate: maxBirthdate,
+              profile_ids: locationFilteredUserIds,
+            })
+            .then(
+              ({
+                data,
+                error,
+              }: {
+                data: any;
+                error: PostgrestError | null;
+              }) => {
+                if (error) {
+                  console.error("Age filter error:", error);
+                  return { data: [] };
+                }
+                return { data };
+              }
+            )
+        );
+        break;
+      }
+
+      case "budget":
+      case "rent": {
+        // query the database for profiles with budget/rent
+        //  within the range
+
+        const [min, max] = value;
+
+        filterPromises.push(
+          supabase
+            .from("profile_information")
+            .select("profile_id")
+            .eq("key", key)
+            .gte("value->data->value", min)
+            .lte("value->data->value", max)
+            .in("profile_id", locationFilteredUserIds)
+            .then(({ data, error }) => {
+              if (error) {
+                console.error(`${key} filter error:`, error);
+                return { data: [] };
+              }
+              return { data };
+            })
+        );
+        break;
+      }
+
+      case "amenities":
+      case "gender": {
+        // query the database for profiles with
+        // amenities or gender selected
+
+        const selectedValues = Object.entries(value)
+          .filter(([_, selected]) => selected)
+          .map(([option]) => option.toLowerCase());
+
+        if (selectedValues.length > 0) {
+          filterPromises.push(
+            supabase
+              .rpc("filter_profiles_by_selected_values", {
+                selected_values: selectedValues,
+                filter_key: key,
+                profile_ids: locationFilteredUserIds,
+              })
+              .then(({ data, error }) => {
+                if (error) {
+                  console.error(`${key} filter error:`, error);
+                  return { data: [] };
+                }
+                return {
+                  data: (data ?? []).map((row) => ({
+                    profile_id: row.profile_id,
+                  })),
+                };
+              })
+          );
+        }
+        break;
+      }
+
+      default:
+        console.warn(`Unknown filter key: ${key}`);
+        break;
     }
-  });
-
-  const { data: filteredData, error: filterError } = await query;
-  if (filterError) {
-    console.error("Error applying filters:", filterError);
-    return { response: [] };
-  }
-  console.log("Filtered user IDs:", filteredData);
-  if (!filteredData || filteredData.length === 0) {
-    return { response: [] };
   }
 
-  const filteredUserIds = filteredData.map((item) => item.profile_id);
+  // query the database for the promises in parallel
+  const filterResults = await Promise.all(filterPromises);
 
-  return { response: filteredUserIds };
+  // track the profile IDs from each filter result
+  const profileIdSets = filterResults.map(
+    (result) => new Set(result.data.map((row) => row.profile_id))
+  );
+
+  if (profileIdSets.length === 0) {
+    return { response: locationFilteredUserIds };
+  }
+
+  // return the profile IDs that are present in all filter results
+  const finalFilteredIds = [
+    ...profileIdSets.reduce((acc, set) => {
+      return new Set([...acc].filter((id) => set.has(id)));
+    }),
+  ];
+
+  return { response: finalFilteredIds };
 };
 
 export const getDiscoveryProfiles = async (
   sourceId: string,
   filters: Record<string, any>,
-  search: "accommodation" | "flatmate" = "flatmate"
+  search: ProfileType = "flatmate"
 ) => {
+  // get users who are already connected with source user
   const { response: connectedUsersIds } = await getConnectedUserIds(
     sourceId,
-    mode: 'flatmate',
-    type: search
+    "flatmate",
+    search
   );
 
+  // get users who the source user liked
   const { response: likedUserIds } = await getLikedUserIds(sourceId);
 
-  const combinedUserIds = [...connectedUsersIds, ...likedUserIds, sourceId];
+  const combinedUserIds = [...connectedUsersIds, ...likedUserIds];
 
-  // const { response: filteredUserIds } = await getFilteredUserIds(
-  //   filters,
-  //   combinedUserIds,
-  //   search
-  // );
+  // use these ids as exclude list and filter every other user
+  // based on the filters provided
+  const result = await getFilteredUserIds(filters, combinedUserIds, search);
+  const filteredUserIds = Array.isArray(result) ? result : result.response;
 
-  // exclude will exclude the given ids
-  const discoveryUsers = await getUserData(combinedUserIds, {
-    exclude: true,
+  // given the filtered user ids, get the user data
+  // and return the profiles with similar interests
+  const discoveryUsers = await getUserData(filteredUserIds, {
+    exclude: false,
+    recommender: true,
+    minimal: false,
     sourceId,
-    recommender: false,
-    filters,
     type: search,
   });
 
@@ -551,6 +702,7 @@ export const getHousingRequests = async (sourceId: string) => {
     exclude: false,
     sourceId,
     recommender: false,
+    minimal: false,
     type: "flatmate",
   });
 
@@ -566,8 +718,12 @@ export const getConnectedUsers = async (
   {
     minimal,
     mode,
-    type,
-  }: { minimal: boolean; mode: "accommodation" | "flatmate"; type: 'accommodation' | 'flatmate' = 'flatmate' }
+    type = "flatmate",
+  }: {
+    minimal: boolean;
+    mode: ProfileType;
+    type?: ProfileType;
+  }
 ) => {
   console.log("Getting connected users for:", sourceId, minimal, mode);
   const { response: connectedUserIds } = await getConnectedUserIds(
@@ -593,85 +749,41 @@ export const getConnectedUsers = async (
 export const likeUser = async (
   targetId: string,
   sourceId: string,
-  mode: "accommodation" | "flatmate"
+  mode: ProfileType
 ) => {
   if (targetId === sourceId)
     return { status: "error", response: "Invalid user" };
 
-  console.log("Like user:", targetId, sourceId);
-  const { data, error } = await supabase
-    .from("profile_interactions")
-    .select("type")
-    .eq("cohert2", sourceId)
-    .eq("cohert1", targetId)
-    .eq("type", "like")
-    .single();
+  // insert the like into the profile_interactions table
+  const { error } = await supabase.from("profile_interactions").insert({
+    cohert1: sourceId,
+    cohert2: targetId,
+    type: "like",
+    mode: mode,
+  });
 
-  if (!data) {
-    const { error } = await supabase.from("profile_interactions").upsert({
-      cohert1: sourceId,
-      cohert2: targetId,
-    });
-    if (error) return { status: "error", response: error };
+  if (error) return { status: "error", response: error.message };
 
-    return { status: "success" };
-  } else {
-    const deleteInteractions = Promise.all([
-      supabase
-        .from("profile_interactions")
-        .delete()
-        .eq("cohert1", targetId)
-        .eq("cohert2", sourceId),
-      supabase
-        .from("profile_interactions")
-        .delete()
-        .eq("cohert1", sourceId)
-        .eq("cohert2", targetId),
-    ]);
-
-    const createConversation = supabase
-      .from("conversation_registry")
-      .insert({})
-      .select("conversation_id")
-      .single();
-
-    const [_, { data: conversationData, error: conversationError }] =
-      await Promise.all([deleteInteractions, createConversation]);
-
-    if (!conversationData) {
-      return { status: "error", response: conversationError };
-    }
-
-    await Promise.all([
-      supabase.from("connections").insert({
-        cohert1: targetId,
-        cohert2: sourceId,
-        type: mode,
-      }),
-      supabase.from("conversation_members").insert([
-        {
-          conversation_id: conversationData.conversation_id,
-          user_id: targetId,
-        },
-        {
-          conversation_id: conversationData.conversation_id,
-          user_id: sourceId,
-        },
-      ]),
-    ]);
-
-    return { status: "success", reponse: "matched" };
-  }
+  return { status: "success" };
 };
 
-export const dislikeUser = async (targetId: string, sourceId: string) => {
+export const dislikeUser = async (
+  targetId: string,
+  sourceId: string,
+  mode: ProfileType
+) => {
   if (targetId === sourceId)
     return { status: "error", response: "Invalid user" };
-  await supabase.from("profile_interactions").insert({
+
+  // insert the dislike into the profile_interactions table
+  const { error } = await supabase.from("profile_interactions").insert({
     cohert1: sourceId,
     cohert2: targetId,
     type: "dislike",
+    mode: mode,
   });
+
+  if (error) return { status: "error", response: error.message };
 
   return { status: "success" };
 };

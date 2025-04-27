@@ -67,13 +67,11 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
   const { session } = useAuth();
   const { viewMode } = useViewMode();
 
-  // Calculate the active profile ID based on the current view mode
   const activeProfileId = profileIds[viewMode as ProfileType] || null;
+  console.log(viewMode, profileIds);
 
-  // Load interests, amenities, profile location, and profile IDs
   useEffect(() => {
     (async () => {
-      // Fetch interest registry
       const { data, error } = await supabase
         .from("interest_registry")
         .select("*");
@@ -88,19 +86,21 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         setGlobalInterests(data.map((interest) => interest.id));
       }
 
-      // Fetch amenity registry
       const { data: amenityData, error: amenityError } = await supabase
-        .from("amenities_registry")
-        .select("*");
-      if (amenityError) {
-        console.error("Error fetching amenities:", amenityError);
-      } else if (amenityData) {
+        .from("filters")
+        .select("*")
+        .eq("filter_key", "amenities")
+        .maybeSingle();
+
+      if (amenityData) {
         const registry: Record<string, string> = {};
-        amenityData.forEach((amenity) => {
+        amenityData.options.values.forEach((amenity) => {
           registry[amenity.id] = amenity.label;
         });
         setAmenityRegistry(registry);
-        setGlobalAmenities(amenityData.map((amenity) => amenity.id));
+        setGlobalAmenities(
+          amenityData.options.values.map((amenity) => amenity.id)
+        );
       }
 
       if (!session?.user.id) return;
@@ -126,18 +126,18 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
       }, {} as Record<ProfileType, string>);
 
       setNewAccount(isNewAccount);
+      console.log("Profile mapping:", profileMapping);
       setProfileIds(profileMapping);
     })();
   }, [session?.user.id]);
 
   const router = useRouter();
-  // Load profile data whenever the active profile changes
+
   useEffect(() => {
     if (!activeProfileId) return;
     if (newAccount) return;
 
     (async () => {
-      // Load user interests for the active profile
       const { data: userInterests, error: interestError } = await supabase
         .from("profile_interests")
         .select("interest_id")
@@ -152,30 +152,21 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         _setInterests(interestIds);
       }
 
-      // Load user amenities for the active profile (if accommodation type)
-      if (viewMode === "accommodation") {
-        const { data: userAmenities, error: amenityError } = await supabase
-          .from("profile_information")
-          .select("value")
-          .eq("profile_id", activeProfileId)
-          .eq("key", "amenities")
-          .single();
+      const { data: userAmenities, error: amenityError } = await supabase
+        .from("profile_information")
+        .select("value")
+        .eq("profile_id", activeProfileId)
+        .eq("filter_key", "amenities")
+        .single();
 
-        if (amenityError) {
-          console.error("Error fetching user amenities:", amenityError);
-        } else if (userAmenities) {
-          const amenityIds = userAmenities.value.data.value.map(
-            (amenity) => amenity.id
-          );
+      if (userAmenities) {
+        const amenityIds = userAmenities.value.data.value.map(
+          (amenity) => amenity.id
+        );
 
-          _setAmenities(amenityIds);
-        }
-      } else {
-        // Clear amenities if not in accommodation mode
-        _setAmenities([]);
+        _setAmenities(amenityIds);
       }
 
-      // Load location for the active profile
       const { data: profile, error: profileError } = await supabase
         .from("profile_locations")
         .select("point")
@@ -210,13 +201,12 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
     })();
   }, [activeProfileId, viewMode, newAccount]);
 
-  // Save location when changed
   useEffect(() => {
     if (!location || !activeProfileId) return;
     (async () => {
       const geoPoint = {
         type: "Point",
-        coordinates: [location.longitude, location.latitude], // [lng, lat]
+        coordinates: [location.longitude, location.latitude],
       };
 
       const { data, error } = await supabase
@@ -230,7 +220,6 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
     })();
   }, [location, activeProfileId]);
 
-  // Interest handlers
   const saveInterests = async (_interests: string[]) => {
     await supabase
       .from("profile_interests")
@@ -267,7 +256,6 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
     return interestRegistery[id] || id;
   };
 
-  // Amenity handlers
   const saveAmenities = async (_amenities: string[]) => {
     await supabase.from("profile_information").upsert({
       profile_id: activeProfileId,
@@ -303,7 +291,6 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
     return amenityRegistry[id] || id;
   };
 
-  // Location setter
   const setLocation = (loc: Location) => {
     _setLocation(loc);
   };
