@@ -2,10 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Filter, FilterState } from "@/typings";
 import { useSearchMode } from "@/providers/ViewModeProvider";
 
-// Track ongoing operations to prevent race conditions
 const ongoingOperations = new Map<string, Promise<any>>();
 
-// Helper to get the current search mode (for use outside React components)
 const getCurrentSearchMode = async (): Promise<
   "flatmate" | "accommodation"
 > => {
@@ -18,7 +16,6 @@ const getCurrentSearchMode = async (): Promise<
   }
 };
 
-// Get storage key based on search mode
 const getFilterStorageKey = async (): Promise<string> => {
   const searchMode = await getCurrentSearchMode();
   return `filters_${searchMode}`;
@@ -28,7 +25,6 @@ export const getSavedFilters = async (): Promise<FilterState> => {
   const storageKey = await getFilterStorageKey();
   const operationKey = `getSavedFilters_${storageKey}`;
 
-  // If there's an ongoing operation, wait for it to complete
   if (ongoingOperations.has(operationKey)) {
     return ongoingOperations.get(operationKey);
   }
@@ -66,7 +62,6 @@ export const saveFilter = async (
   const storageKey = await getFilterStorageKey();
   const operationKey = `saveFilter-${storageKey}-${filterKey}`;
 
-  // If there's an ongoing operation for this filter, wait for it to complete
   if (ongoingOperations.has(operationKey)) {
     await ongoingOperations.get(operationKey);
   }
@@ -90,7 +85,6 @@ export const saveFilter = async (
   return operation;
 };
 
-// This function can be used in React components where hooks are available
 export const useFiltersBySearchMode = () => {
   const { searchMode } = useSearchMode();
 
@@ -153,7 +147,6 @@ export const getFilterDescription = (
   }
 };
 
-// Legacy functions for view mode (kept for backward compatibility)
 export const getLandlordMode = async (): Promise<boolean> => {
   try {
     const mode = await AsyncStorage.getItem("viewMode");
@@ -172,7 +165,6 @@ export const setLandlordMode = async (mode: boolean): Promise<void> => {
   }
 };
 
-// Clear all filters for the current search mode
 export const clearFilters = async (): Promise<void> => {
   try {
     const storageKey = await getFilterStorageKey();
@@ -182,7 +174,6 @@ export const clearFilters = async (): Promise<void> => {
   }
 };
 
-// Get all filters for all search modes (useful for debugging or data migration)
 export const getAllFilters = async (): Promise<Record<string, FilterState>> => {
   try {
     const flatmateFilters = await AsyncStorage.getItem("filters_flatmate");
