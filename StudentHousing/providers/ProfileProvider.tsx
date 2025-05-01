@@ -164,6 +164,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
         _setInterests(interestIds);
       }
 
+      //
       const { data: userAmenities, error: amenityError } = await supabase
         .from("profile_information")
         .select("value")
