@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { View, YStack, Text, Button } from "tamagui";
 import { HeaderWithBack } from "../(filters)";
 import { MultiSelect } from "@/components/Inputs/MultiSelect";
@@ -7,17 +7,30 @@ import { useProfile } from "@/providers/ProfileProvider";
 import Loading from "@/components/Loading";
 import supabase from "@/lib/supabase";
 import { useViewMode } from "@/providers/ViewModeProvider";
+import { validateInput, commonRules } from "@/utils/validation";
+
+type SelectRouteParams = {
+  item: string;
+};
+
+type SelectRouteProp = RouteProp<{ params: SelectRouteParams }>;
+
+type Option = {
+  id: string;
+  label: string;
+};
 
 export default function SelectScreen() {
   const navigation = useNavigation();
-  const route = useRoute();
+  const route = useRoute<SelectRouteProp>();
   const { activeProfileId, setInterests, setAmenities } = useProfile();
   const { viewMode } = useViewMode();
   const [loading, setLoading] = useState(false);
   const [currentSelection, setCurrentSelection] = useState<string[]>([]);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const parsedItem = useMemo(() => {
-    const { item } = route.params || {};
+    const { item } = route.params;
     if (!item) return null;
 
     try {
@@ -30,13 +43,13 @@ export default function SelectScreen() {
 
   const { type, value, creation } = parsedItem;
 
-  const title = value?.title || "Select Options";
+  const title = creation.pageLabel || "Select Options";
 
   const options = creation?.options?.values || [];
   const isSingleSelect = creation?.options?.singleSelect;
 
   const formattedOptions = useMemo(() => {
-    return options.map((option) => ({
+    return options.map((option: Option) => ({
       id: option.id || option,
       label: option.label || option,
     }));
@@ -60,7 +73,25 @@ export default function SelectScreen() {
     }
   }, [parsedItem]);
 
+  const handleSelectionChange = (newSelection: string[]) => {
+    setCurrentSelection(newSelection);
+
+    // Validate selection
+    const rules = [
+      commonRules.required("Please select at least one option"),
+      commonRules.custom(
+        (value) => Array.isArray(value) && value.length > 0,
+        "Please select at least one option"
+      ),
+    ];
+
+    const result = validateInput(newSelection, rules);
+    setValidationErrors(result.errors);
+  };
+
   const saveSelection = async () => {
+    if (validationErrors.length > 0) return;
+
     if (!activeProfileId || !type) {
       console.error("User session or database key not available.");
       return;
@@ -71,10 +102,9 @@ export default function SelectScreen() {
       if (type === "interests") {
         setInterests(currentSelection);
       } else if (type === "amenities") {
-        console.log(currentSelection);
         setAmenities(currentSelection);
       } else {
-        const selectedOptions = formattedOptions.filter((option) =>
+        const selectedOptions = formattedOptions.filter((option: Option) =>
           currentSelection.includes(option.id)
         );
 
@@ -106,17 +136,9 @@ export default function SelectScreen() {
     return (
       <>
         <HeaderWithBack page="Error" />
-        <View
-          flex={1}
-          padding="$4"
-          backgroundColor="$background"
-          justifyContent="center"
-          alignItems="center"
-        >
+        <View flex={1} space="$4" bg="$background" jc="center" ai="center">
           <Text>Invalid configuration data</Text>
-          <Button onPress={() => navigation.goBack()} marginTop="$4">
-            Go Back
-          </Button>
+          <Button onPress={() => navigation.goBack()}>Go Back</Button>
         </View>
       </>
     );
@@ -125,7 +147,7 @@ export default function SelectScreen() {
   return (
     <>
       <HeaderWithBack page={title} />
-      <View flex={1} padding="$4" backgroundColor="$background">
+      <View flex={1} space="$4" bg="$background">
         {loading ? (
           <Loading title="Saving your selection" />
         ) : (
@@ -137,10 +159,21 @@ export default function SelectScreen() {
             <MultiSelect
               options={formattedOptions}
               value={currentSelection}
-              onChange={setCurrentSelection}
+              onChange={handleSelectionChange}
               singleSelect={isSingleSelect}
             />
-            <Button onPress={saveSelection}>Save</Button>
+            {validationErrors.length > 0 && (
+              <Text color="$red10" fontSize="$2">
+                {validationErrors[0]}
+              </Text>
+            )}
+            <Button
+              onPress={saveSelection}
+              opacity={validationErrors.length > 0 ? 0.5 : 1}
+              disabled={validationErrors.length > 0}
+            >
+              Save
+            </Button>
           </YStack>
         )}
       </View>

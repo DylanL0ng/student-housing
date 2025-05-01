@@ -24,6 +24,13 @@ const profileInfoHandlers = {
       return calculateAge(new Date(item.value.data.value));
     },
   },
+
+  university: {
+    parse: (item) => {
+      if (!item) return "";
+      return item.value.data.value?.label || "";
+    },
+  },
 };
 
 const InterestBadge = ({ interestName }) => (
@@ -80,6 +87,9 @@ const ProfileCard = ({ profile }: ProfileCardProps) => {
         <Text style={styles.personalInfoGreeting}>
           {parsedInfo.name}, {parsedInfo.age}
         </Text>
+        {profile.type === "flatmate" && parsedInfo.university && (
+          <Text style={styles.universityText}>{parsedInfo.university}</Text>
+        )}
 
         <View style={styles.interestsContainer}>
           {interests.map((interest, index) => (
@@ -163,6 +173,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginTop: 16,
+  },
+  universityText: {
+    color: "white",
+    fontSize: 16,
+    opacity: 0.9,
+    marginBottom: 8,
   },
 });
 

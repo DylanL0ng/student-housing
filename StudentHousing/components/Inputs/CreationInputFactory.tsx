@@ -16,7 +16,7 @@ import MediaUpload, {
 } from "../MediaUpload";
 import { useAuth } from "@/providers/AuthProvider";
 import supabase from "@/lib/supabase";
-import { View } from "tamagui";
+import { View, Text, YStack } from "tamagui";
 import {
   InputOptions,
   MultiSelectOptions,
@@ -25,6 +25,7 @@ import {
 } from "@/app/(auth)/creation";
 import { LocationPicker } from "../LocationPicker";
 import { useProfile } from "@/providers/ProfileProvider";
+import { validateInput, commonRules, ValidationRule } from "@/utils/validation";
 
 interface CreationInputFactoryProps {
   question: Question;
@@ -45,6 +46,7 @@ export const CreationInputFactory = ({
   } = useProfile();
 
   const [inputState, setInputState] = state;
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const loadImages = useCallback(async () => {
     if (!activeProfileId || question.type !== "media") return;
@@ -89,146 +91,276 @@ export const CreationInputFactory = ({
     loadImages();
   }, [activeProfileId, loadImages]);
 
-  if (!session) return <></>;
+  const getValidationRules = (type: string): ValidationRule[] => {
+    switch (type) {
+      case "text":
+        return [
+          commonRules.required("This field is required"),
+          commonRules.minLength(1, "Text must be at least 1 character long"),
+          commonRules.maxLength(500, "Text must be less than 500 characters"),
+        ];
+      case "multiSelect":
+        return [
+          commonRules.required("At least one option must be selected"),
+          commonRules.custom(
+            (value) => Array.isArray(value) && value.length > 0,
+            "At least one option must be selected"
+          ),
+        ];
+      case "select":
+        return [commonRules.required("Please select an option")];
+      case "slider":
+        return [
+          commonRules.required("Please select a value"),
+          commonRules.min(0, "Value must be greater than or equal to 0"),
+        ];
+      case "date":
+        return [
+          commonRules.required("Please select a date"),
+          commonRules.age(18, "You must be at least 18 years old"),
+        ];
+      case "media":
+        return [
+          commonRules.required("Please upload at least one image"),
+          commonRules.custom(
+            (value) => Array.isArray(value) && value.length > 0,
+            "Please upload at least one image"
+          ),
+        ];
+      case "location":
+        return [
+          commonRules.required("Please select a location"),
+          commonRules.custom(
+            (value) => value?.latitude && value?.longitude,
+            "Please select a valid location"
+          ),
+        ];
+      default:
+        return [];
+    }
+  };
 
-  if (question.key === "interests") {
-    return (
-      <MultiSelect
-        options={globalInterests.map((id) => ({
-          id,
-          label: getInterestName(id),
-        }))}
-        value={inputState.multiSelect || []}
-        onChange={(value) => {
-          setInputState({
-            ...inputState,
-            multiSelect: value,
-          });
-        }}
-        singleSelect={false}
-      />
-    );
-  }
+  const validateAndUpdateState = (field: string, value: any) => {
+    const rules = getValidationRules(question.type);
+    const result = validateInput(value, rules);
+    setValidationErrors(result.errors);
 
-  if (question.key === "amenities") {
-    return (
-      <MultiSelect
-        options={globalAmenities.map((id) => ({
-          id,
-          label: getAmenityName(id),
-        }))}
-        value={inputState.multiSelect || []}
-        onChange={(value) => {
-          setInputState({
-            ...inputState,
-            multiSelect: value,
-          });
-        }}
-        singleSelect={false}
-      />
-    );
-  }
-
-  const updateInputState = (field: string, value: any) => {
     setInputState({
       ...inputState,
       [field]: value,
     });
   };
 
-  switch (question.type) {
-    case "text": {
-      const textOptions = question.options as InputOptions;
-      return (
-        <TextField
-          value={inputState.text}
-          onChange={(value) => updateInputState("text", value)}
-          options={{
-            placeholder: textOptions?.placeholder || "",
-          }}
-        />
-      );
-    }
+  if (!session) return <></>;
 
-    case "multiSelect": {
-      const multiSelectOptions = question.options as MultiSelectOptions[];
-      const options = multiSelectOptions;
-
-      return (
+  if (question.key === "interests") {
+    return (
+      <View>
         <MultiSelect
-          options={options}
-          onChange={(selected) => updateInputState("multiSelect", selected)}
-          value={inputState.multiSelect}
+          options={globalInterests.map((id) => ({
+            id,
+            label: getInterestName(id),
+          }))}
+          value={inputState.multiSelect || []}
+          onChange={(value) => validateAndUpdateState("multiSelect", value)}
           singleSelect={false}
         />
-      );
-    }
-
-    case "select": {
-      const selectOptions = question.options.values as MultiSelectOptions[];
-      return (
-        <MultiSelect
-          options={selectOptions}
-          onChange={(selected) => updateInputState("select", selected)}
-          value={inputState.select}
-          singleSelect={true}
-        />
-      );
-    }
-
-    case "slider": {
-      const sliderOptions = question.options as SliderOptions;
-      const { range } = sliderOptions;
-      const [min, max, step] = range;
-      return (
-        <SliderInput
-          value={inputState.slider}
-          min={min}
-          max={max}
-          step={step}
-          prefix="€"
-          onValueChange={(value) => updateInputState("slider", value)}
-        />
-      );
-    }
-
-    case "date":
-      return (
-        <DatePicker
-          value={inputState.date}
-          onValueChange={(value) => updateInputState("date", value)}
-          showAgeLabel
-        />
-      );
-
-    case "media":
-      return (
-        <MediaUpload
-          onUpload={(image) => {
-            const newMedia = [...inputState.media, image];
-            updateInputState("media", newMedia);
-          }}
-          onDelete={(image) => {
-            const newMedia = [...inputState.media].filter(
-              (img: ImageObject) => img.uri !== image.uri
-            );
-            updateInputState("media", newMedia);
-          }}
-          images={inputState.media as ImageObject[]}
-        />
-      );
-
-    case "location":
-      return (
-        <LocationPicker
-          showSaveButton={false}
-          onLocationChange={(location) =>
-            updateInputState("location", location)
-          }
-        />
-      );
-
-    default:
-      return <View />;
+        {validationErrors.length > 0 && (
+          <YStack space="$2">
+            <Text color="$red10" fontSize="$2">
+              {validationErrors[0]}
+            </Text>
+          </YStack>
+        )}
+      </View>
+    );
   }
+
+  if (question.key === "amenities") {
+    return (
+      <View>
+        <MultiSelect
+          options={globalAmenities.map((id) => ({
+            id,
+            label: getAmenityName(id),
+          }))}
+          value={inputState.multiSelect || []}
+          onChange={(value) => validateAndUpdateState("multiSelect", value)}
+          singleSelect={false}
+        />
+        {validationErrors.length > 0 && (
+          <YStack space="$2">
+            <Text color="$red10" fontSize="$2">
+              {validationErrors[0]}
+            </Text>
+          </YStack>
+        )}
+      </View>
+    );
+  }
+
+  const renderInput = () => {
+    switch (question.type) {
+      case "text": {
+        const textOptions = question.options as InputOptions;
+        return (
+          <View>
+            <TextField
+              value={inputState.text}
+              onChange={(value) => validateAndUpdateState("text", value)}
+              options={{
+                placeholder: textOptions?.placeholder || "",
+              }}
+            />
+            {validationErrors.length > 0 && (
+              <YStack space="$2">
+                <Text color="$red10" fontSize="$2">
+                  {validationErrors[0]}
+                </Text>
+              </YStack>
+            )}
+          </View>
+        );
+      }
+
+      case "multiSelect": {
+        const multiSelectOptions = question.options as MultiSelectOptions[];
+        return (
+          <View>
+            <MultiSelect
+              options={multiSelectOptions}
+              onChange={(selected) =>
+                validateAndUpdateState("multiSelect", selected)
+              }
+              value={inputState.multiSelect}
+              singleSelect={false}
+            />
+            {validationErrors.length > 0 && (
+              <YStack space="$2">
+                <Text color="$red10" fontSize="$2">
+                  {validationErrors[0]}
+                </Text>
+              </YStack>
+            )}
+          </View>
+        );
+      }
+
+      case "select": {
+        const selectOptions = question.options.values as MultiSelectOptions[];
+        return (
+          <View>
+            <MultiSelect
+              options={selectOptions}
+              onChange={(selected) =>
+                validateAndUpdateState("select", selected)
+              }
+              value={inputState.select}
+              singleSelect={true}
+            />
+            {validationErrors.length > 0 && (
+              <YStack space="$2">
+                <Text color="$red10" fontSize="$2">
+                  {validationErrors[0]}
+                </Text>
+              </YStack>
+            )}
+          </View>
+        );
+      }
+
+      case "slider": {
+        const sliderOptions = question.options as SliderOptions;
+        const { range } = sliderOptions;
+        const [min, max, step] = range;
+        return (
+          <View>
+            <SliderInput
+              value={inputState.slider}
+              min={min}
+              max={max}
+              step={step}
+              prefix="€"
+              onValueChange={(value) => validateAndUpdateState("slider", value)}
+            />
+            {validationErrors.length > 0 && (
+              <YStack space="$2">
+                <Text color="$red10" fontSize="$2">
+                  {validationErrors[0]}
+                </Text>
+              </YStack>
+            )}
+          </View>
+        );
+      }
+
+      case "date":
+        return (
+          <View>
+            <DatePicker
+              value={inputState.date}
+              onValueChange={(value) => validateAndUpdateState("date", value)}
+              showAgeLabel
+            />
+            {validationErrors.length > 0 && (
+              <YStack space="$2">
+                <Text color="$red10" fontSize="$2">
+                  {validationErrors[0]}
+                </Text>
+              </YStack>
+            )}
+          </View>
+        );
+
+      case "media":
+        return (
+          <View>
+            <MediaUpload
+              onUpload={(image) => {
+                const newMedia = [...inputState.media, image];
+                validateAndUpdateState("media", newMedia);
+              }}
+              onDelete={(image) => {
+                const newMedia = [...inputState.media].filter(
+                  (img: ImageObject) => img.uri !== image.uri
+                );
+                validateAndUpdateState("media", newMedia);
+              }}
+              images={inputState.media as ImageObject[]}
+            />
+            {validationErrors.length > 0 && (
+              <YStack space="$2">
+                <Text color="$red10" fontSize="$2">
+                  {validationErrors[0]}
+                </Text>
+              </YStack>
+            )}
+          </View>
+        );
+
+      case "location":
+        return (
+          <View>
+            <LocationPicker
+              showSaveButton={false}
+              onLocationChange={(location) =>
+                validateAndUpdateState("location", location)
+              }
+            />
+            {validationErrors.length > 0 && (
+              <YStack space="$2">
+                <Text color="$red10" fontSize="$2">
+                  {validationErrors[0]}
+                </Text>
+              </YStack>
+            )}
+          </View>
+        );
+
+      default:
+        return <View />;
+    }
+  };
+
+  return renderInput();
 };

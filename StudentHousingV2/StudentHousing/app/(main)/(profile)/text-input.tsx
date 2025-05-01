@@ -16,6 +16,8 @@ const TextInputScreen = () => {
 
   const parsedItem = JSON.parse(Array.isArray(item) ? item[0] : item);
 
+  console.log("Parsed Item:", parsedItem);
+
   const { type, value } = parsedItem;
   const { label, placeholder, data } = value;
 

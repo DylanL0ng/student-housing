@@ -148,138 +148,152 @@ const ProfileModal = () => {
   };
 
   const RenderProfileItem = ({ item }: { item: any }) => {
-    switch (item.type) {
-      case "biography":
-        return (
-          <View
-            overflow="hidden"
-            paddingBlock="$8"
-            paddingInline="$4"
-            bg="$color4"
-            display="flex"
-            gap="$2"
-            style={{
-              borderRadius: 16,
-              marginVertical: 8,
-            }}
-          >
-            <Text fontWeight="bold" fontSize="$3">
-              Bio
-            </Text>
-            <Text fontSize="$8">{`${item.value.data.value}` || ""}</Text>
-          </View>
-        );
-      case "age":
-        return (
-          <View
-            overflow="hidden"
-            paddingBlock="$4"
-            paddingInline="$4"
-            bg="$color4"
-            display="flex"
-            gap="$2"
-            style={{
-              borderRadius: 16,
-              marginVertical: 8,
-            }}
-          >
-            <Text fontWeight="bold" fontSize="$3">
-              Age
-            </Text>
-            <Text fontSize="$8">
-              {item.value?.data?.value
-                ? calculateAge(new Date(item.value.data.value))
-                : ""}
-            </Text>
-          </View>
-        );
-      case "gender":
-        return <></>;
-      case "budget":
-        return (
-          <View
-            overflow="hidden"
-            paddingBlock="$4"
-            paddingInline="$4"
-            bg="$color4"
-            display="flex"
-            gap="$2"
-            style={{
-              borderRadius: 16,
-              marginVertical: 8,
-            }}
-          >
-            <Text fontWeight="bold" fontSize="$3">
-              Budget
-            </Text>
-            <Text fontSize="$8">€{item.value?.data?.value || ""}</Text>
-          </View>
-        );
-      case "name":
-        return (
-          <View
-            overflow="hidden"
-            paddingBlock="$4"
-            paddingInline="$4"
-            bg="$color4"
-            display="flex"
-            gap="$2"
-            style={{
-              borderRadius: 16,
-              marginVertical: 8,
-            }}
-          >
-            <Text fontWeight="bold" fontSize="$3">
-              Name
-            </Text>
-            <Text fontSize="$8">{item.value?.data?.value || ""}</Text>
-          </View>
-        );
-      case "university":
-        return (
-          <View
-            overflow="hidden"
-            paddingBlock="$4"
-            paddingInline="$4"
-            bg="$color4"
-            display="flex"
-            gap="$2"
-            style={{
-              borderRadius: 16,
-              marginVertical: 8,
-            }}
-          >
-            <Text fontWeight="bold" fontSize="$3">
-              University
-            </Text>
-            <Text fontSize="$8">{item.value?.data?.value?.label}</Text>
-          </View>
-        );
-      default:
-        return (
-          <View
-            overflow="hidden"
-            paddingBlock="$4"
-            paddingInline="$4"
-            bg="$color4"
-            display="flex"
-            gap="$2"
-            style={{
-              borderRadius: 16,
-              marginVertical: 8,
-            }}
-          >
-            <Text fontWeight="bold" fontSize="$3">
-              {item.label || item.key}
-            </Text>
-            <Text fontSize="$8">
-              {typeof item.value?.data === "object"
-                ? JSON.stringify(item.value.data)
-                : item.value?.data || ""}
-            </Text>
-          </View>
-        );
-    }
+    const renderContent = () => {
+      switch (item.type) {
+        case "biography":
+          return (
+            <View
+              overflow="hidden"
+              paddingBlock="$6"
+              paddingInline="$4"
+              bg="$color4"
+              display="flex"
+              gap="$3"
+              style={{
+                borderRadius: 16,
+                marginVertical: 8,
+                borderWidth: 1,
+                borderColor: theme.color5.val,
+              }}
+            >
+              <Text fontWeight="bold" fontSize="$4" color="$color11">
+                Bio
+              </Text>
+              <Text fontSize="$6" color="$color12" lineHeight="$4">
+                {`${item.value.data.value}` || ""}
+              </Text>
+            </View>
+          );
+        case "age":
+          return (
+            <View
+              overflow="hidden"
+              paddingBlock="$4"
+              paddingInline="$4"
+              bg="$color4"
+              display="flex"
+              gap="$2"
+              style={{
+                borderRadius: 16,
+                marginVertical: 8,
+                borderWidth: 1,
+                borderColor: theme.color5.val,
+              }}
+            >
+              <Text fontWeight="bold" fontSize="$4" color="$color11">
+                Age
+              </Text>
+              <Text fontSize="$6" color="$color12">
+                {item.value?.data?.value
+                  ? calculateAge(new Date(item.value.data.value))
+                  : ""}
+              </Text>
+            </View>
+          );
+        case "gender":
+          return <></>;
+        case "budget":
+          return (
+            <View
+              overflow="hidden"
+              paddingBlock="$4"
+              paddingInline="$4"
+              bg="$color4"
+              display="flex"
+              gap="$2"
+              style={{
+                borderRadius: 16,
+                marginVertical: 8,
+                borderWidth: 1,
+                borderColor: theme.color5.val,
+              }}
+            >
+              <Text fontWeight="bold" fontSize="$4" color="$color11">
+                Budget
+              </Text>
+              <Text fontSize="$6" color="$color12">
+                €{item.value?.data?.value || ""}
+              </Text>
+            </View>
+          );
+        case "name":
+          return <></>;
+        case "university":
+          return (
+            <View
+              overflow="hidden"
+              paddingBlock="$4"
+              paddingInline="$4"
+              bg="$color4"
+              display="flex"
+              gap="$2"
+              style={{
+                borderRadius: 16,
+                marginVertical: 8,
+                borderWidth: 1,
+                borderColor: theme.color5.val,
+              }}
+            >
+              <Text fontWeight="bold" fontSize="$4" color="$color11">
+                University
+              </Text>
+              <Text fontSize="$6" color="$color12">
+                {item.value?.data?.value?.label}
+              </Text>
+            </View>
+          );
+        default:
+          return (
+            <View
+              overflow="hidden"
+              paddingBlock="$4"
+              paddingInline="$4"
+              bg="$color4"
+              display="flex"
+              gap="$2"
+              style={{
+                borderRadius: 16,
+                marginVertical: 8,
+                borderWidth: 1,
+                borderColor: theme.color5.val,
+              }}
+            >
+              <Text fontWeight="bold" fontSize="$4" color="$color11">
+                {item.label || item.key}
+              </Text>
+              {item.value?.data?.value ? (
+                <Text fontSize="$6" color="$color12">
+                  {item.value?.data?.value?.label || item.value?.data?.value}
+                </Text>
+              ) : item.value?.data ? (
+                <Text fontSize="$6" color="$color12">
+                  {typeof item.value.data === "object"
+                    ? Object.entries(item.value.data)
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join("\n")
+                    : item.value.data}
+                </Text>
+              ) : (
+                <Text fontSize="$6" color="$color12" opacity={0.7}>
+                  Not specified
+                </Text>
+              )}
+            </View>
+          );
+      }
+    };
+
+    return renderContent();
   };
 
   const renderContentItem = (item: ContentItem) => {
@@ -290,6 +304,12 @@ const ProfileModal = () => {
           marginBlock="$2"
           aspectRatio={0.75}
           flex={1}
+          style={{
+            borderRadius: 16,
+            overflow: "hidden",
+            borderWidth: 1,
+            borderColor: theme.color5.val,
+          }}
         >
           <Image
             cachePolicy={"none"}
@@ -321,25 +341,28 @@ const ProfileModal = () => {
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "center",
-            paddingBlock: 8,
+            paddingBlock: 12,
             paddingInline: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: theme.color5.val,
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Text fontWeight="800" fontSize="$8" color="$color">
-              {profileData?.information.name.value.data.value}
+              {profileData?.information?.name?.value?.data?.value || "Profile"}
             </Text>
-            <Text fontWeight="600" fontSize="$6" color="$color12"></Text>
           </View>
           <Button pressTheme circular={true} onPress={() => router.back()}>
             <X size="$1" color="$color" strokeWidth={2} />
           </Button>
         </View>
-        {
-          <ScrollView showsVerticalScrollIndicator={false} marginInline="$4">
-            {interspersedContent.map((item) => renderContentItem(item))}
-          </ScrollView>
-        }
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          marginInline="$4"
+          contentContainerStyle={{ paddingBottom: 24 }}
+        >
+          {interspersedContent.map((item) => renderContentItem(item))}
+        </ScrollView>
 
         {shouldShowLikes && (
           <Animated.View

@@ -473,6 +473,13 @@ export const getLocationFilteredUserIds = async (
   // If we have a location filter
   const { latitude, longitude, range } = filters.location;
 
+  console.log(
+    "Getting location filtered user IDs:",
+    latitude,
+    longitude,
+    range,
+    excludeUserIds
+  );
   const { data: locationData, error: locationError } = await supabase.rpc(
     "get_profiles_within_distance",
     {
@@ -483,6 +490,8 @@ export const getLocationFilteredUserIds = async (
       distance_meters: range,
     }
   );
+
+  console.log("Location data:", locationData, locationError);
 
   if (locationError) {
     console.error("Error applying location filter:", locationError);
@@ -503,6 +512,8 @@ export const getFilteredUserIds = async (
     excludeUserIds,
     mode
   );
+
+  console.log("Location filtered user IDs:", locationFilteredUserIds);
 
   // remove the location filter from the filters object
   // as its already applied
@@ -549,6 +560,7 @@ export const getFilteredUserIds = async (
                 data: any;
                 error: PostgrestError | null;
               }) => {
+                console.log("Age filter data:", data, error);
                 if (error) {
                   console.error("Age filter error:", error);
                   return { data: [] };
@@ -576,6 +588,7 @@ export const getFilteredUserIds = async (
             .lte("value->data->value", max)
             .in("profile_id", locationFilteredUserIds)
             .then(({ data, error }) => {
+              console.log(`${key} filter data:`, data, error);
               if (error) {
                 console.error(`${key} filter error:`, error);
                 return { data: [] };
@@ -595,6 +608,7 @@ export const getFilteredUserIds = async (
           .filter(([_, selected]) => selected)
           .map(([option]) => option.toLowerCase());
 
+        console.log("Selected values:", selectedValues);
         if (selectedValues.length > 0) {
           filterPromises.push(
             supabase
@@ -604,6 +618,7 @@ export const getFilteredUserIds = async (
                 profile_ids: locationFilteredUserIds,
               })
               .then(({ data, error }) => {
+                console.log(`${key} filter data:`, data, error);
                 if (error) {
                   console.error(`${key} filter error:`, error);
                   return { data: [] };
@@ -633,6 +648,7 @@ export const getFilteredUserIds = async (
     (result) => new Set(result.data.map((row) => row.profile_id))
   );
 
+  console.log("Filter results:", profileIdSets, filterResults);
   if (profileIdSets.length === 0) {
     return { response: locationFilteredUserIds };
   }
@@ -669,6 +685,7 @@ export const getDiscoveryProfiles = async (
   const result = await getFilteredUserIds(filters, combinedUserIds, search);
   const filteredUserIds = Array.isArray(result) ? result : result.response;
 
+  console.log("Filtered user IDs:", filteredUserIds);
   // given the filtered user ids, get the user data
   // and return the profiles with similar interests
   const discoveryUsers = await getUserData(filteredUserIds, {

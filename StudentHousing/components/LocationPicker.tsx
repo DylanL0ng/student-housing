@@ -39,6 +39,14 @@ export const LocationPicker = ({
 
   const [radius, setRadius] = useState(initialLocation?.range ?? 1000);
 
+  useEffect(() => {
+    onLocationChange?.({
+      latitude: center.latitude,
+      longitude: center.longitude,
+      range: radius,
+    });
+  }, [radius, center, onLocationChange]);
+
   const handleRegionChange = useCallback(
     debounce((region) => {
       setCenter({

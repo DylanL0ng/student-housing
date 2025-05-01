@@ -1,7 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { getDiscoveryProfiles, createResponse } from "../_utils/supabase.ts";
-
-Deno.serve(async (req) => {
+Deno.serve(async (req)=>{
   try {
     const { sourceId, filters, type } = await req.json();
     if (!sourceId) {
@@ -10,18 +9,9 @@ Deno.serve(async (req) => {
     if (!type) {
       return createResponse("error", "Type is required");
     }
-
-    const { status, response } = await getDiscoveryProfiles(
-      sourceId,
-      filters,
-      type
-    );
-
+    const { status, response } = await getDiscoveryProfiles(sourceId, filters, type);
     return createResponse(status === "success" ? "success" : "error", response);
   } catch (error) {
-    return createResponse(
-      "error",
-      error instanceof Error ? error.message : "An unknown error occurred"
-    );
+    return createResponse("error", error instanceof Error ? error.message : "An unknown error occurred");
   }
 });

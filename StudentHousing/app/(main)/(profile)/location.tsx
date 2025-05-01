@@ -4,9 +4,13 @@ import { LocationPicker } from "@/components/LocationPicker";
 import { HeaderWithBack } from "../(filters)";
 import { useProfile } from "@/providers/ProfileProvider";
 import { useNavigation } from "expo-router";
+import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+import * as Location from "expo-location";
 
 const LocationScreen = () => {
   const { location, setLocation } = useProfile();
+
+  const [loading, setLoading] = useState(true);
 
   const navigation = useNavigation();
   const [initialLocation, setInitialLocation] = useState<{
@@ -27,6 +31,24 @@ const LocationScreen = () => {
         latitude: location.latitude,
         longitude: location.longitude,
       });
+      setLoading(false);
+    } else {
+      // get the current location
+      async () => {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          console.log("Permission to access location was denied");
+          setLoading(false);
+          return;
+        }
+
+        const position = await Location.getCurrentPositionAsync({});
+        setInitialLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setLoading(false);
+      };
     }
   }, [location]);
 
@@ -55,7 +77,7 @@ const LocationScreen = () => {
         paddingBlock={"$4"}
         paddingInline="$4"
       >
-        {initialLocation && (
+        {loading && (
           <LocationPicker
             initialLocation={initialLocation}
             onLocationChange={setSelectedLocation}

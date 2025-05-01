@@ -67,7 +67,9 @@ interface ProfileInformationItem {
   label: string;
   priority_order: number;
   editable: boolean;
-  value: any;
+  value: ProfileItemValue;
+  type?: string;
+  input_type?: string;
 }
 
 type InputType = keyof typeof inputTypeHandlers;
@@ -214,16 +216,41 @@ const inputTypeHandlers: Record<string, InputHandler> = {
   },
 };
 
+const getSafeValue = <T,>(
+  item: ProfileInformationItem | undefined | null,
+  defaultValue: T
+): T => {
+  try {
+    if (!item?.value?.data?.value) return defaultValue;
+    return item.value.data.value;
+  } catch (error) {
+    console.error("Error accessing value:", error);
+    return defaultValue;
+  }
+};
+
+const getSafeLabel = (
+  item: ProfileInformationItem | undefined | null
+): string => {
+  try {
+    if (!item) return "Unknown";
+    return item.label || "Unknown";
+  } catch (error) {
+    console.error("Error accessing label:", error);
+    return "Unknown";
+  }
+};
+
 export default function ProfileScreen() {
   const { session } = useAuth();
 
   if (!session) return <></>;
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tabMode, setTabMode] = useState<"edit" | "preview">("edit");
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
   const [profileImages, setProfileImages] = useState<ImageObject[]>([]);
-
   const [profileInformation, setProfileInformation] = useState<
     Array<[string, ProfileInformationItem]>
   >([]);
@@ -245,23 +272,28 @@ export default function ProfileScreen() {
   const { viewMode } = useViewMode();
 
   const profileContext = {
-    interests,
-    globalInterests,
-    getInterestName,
-    amenities,
-    globalAmenities,
-    getAmenityName,
+    interests: interests || [],
+    globalInterests: globalInterests || [],
+    getInterestName: (id: string) => getInterestName(id) || id,
+    amenities: amenities || [],
+    globalAmenities: globalAmenities || [],
+    getAmenityName: (id: string) => getAmenityName(id) || id,
     locationLabel,
   };
 
   useEffect(() => {
     (async () => {
       if (location) {
-        const city = await getCityFromCoordinates(
-          location.latitude,
-          location.longitude
-        );
-        setLocationLabel(city);
+        try {
+          const city = await getCityFromCoordinates(
+            location.latitude,
+            location.longitude
+          );
+          setLocationLabel(city);
+        } catch (error) {
+          console.error("Error getting city:", error);
+          setLocationLabel("Location unavailable");
+        }
       }
     })();
   }, [location]);
@@ -272,87 +304,140 @@ export default function ProfileScreen() {
     }, [viewMode])
   );
 
-  const formatProfileInformation = (item: ProfileItem) => {
-    if (item.type && profileItemHandlers[item.type]) {
-      return profileItemHandlers[item.type].getFormattedValue(
-        item,
-        profileContext
-      );
-    }
+  const formatProfileInformation = (item: ProfileInformationItem) => {
+    try {
+      if (!item) return "Not available";
 
-    if (item.input_type && inputTypeHandlers[item.input_type]) {
-      return inputTypeHandlers[item.input_type].getFormattedValue(item);
-    }
+      if (item.type && profileItemHandlers[item.type]) {
+        return profileItemHandlers[item.type].getFormattedValue(
+          item,
+          profileContext
+        );
+      }
 
-    return "Unknown format";
+      if (item.input_type && inputTypeHandlers[item.input_type]) {
+        return inputTypeHandlers[item.input_type].getFormattedValue(item);
+      }
+
+      return getSafeValue(item, "Not available");
+    } catch (error) {
+      console.error("Error formatting profile information:", error);
+      return "Error displaying value";
+    }
   };
 
-  const handleItemPress = (item: ProfileItem) => {
-    if (item.type && profileItemHandlers[item.type]) {
-      profileItemHandlers[item.type].handleNavigation(item, profileContext);
-      return;
-    }
+  const handleItemPress = (item: ProfileInformationItem) => {
+    try {
+      if (item.type && profileItemHandlers[item.type]) {
+        profileItemHandlers[item.type].handleNavigation(item, profileContext);
+        return;
+      }
 
-    if (item.input_type && inputTypeHandlers[item.input_type]) {
-      inputTypeHandlers[item.input_type].handleNavigation(item);
-      return;
-    }
+      if (item.input_type && inputTypeHandlers[item.input_type]) {
+        inputTypeHandlers[item.input_type].handleNavigation(item);
+        return;
+      }
 
-    console.warn("Unknown item type:", item);
+      console.warn("Unknown item type:", item);
+    } catch (error) {
+      console.error("Error handling item press:", error);
+    }
   };
 
   const fetchProfile = async () => {
-    const { data, error } = await supabase.functions.invoke("getProfile", {
-      body: {
-        userId: activeProfileId,
-        mode: viewMode,
-      },
-    });
+    try {
+      setError(null);
+      const { data, error: fetchError } = await supabase.functions.invoke(
+        "getProfile",
+        {
+          body: {
+            userId: activeProfileId,
+            mode: viewMode,
+          },
+        }
+      );
 
-    const { response, status } = data;
-    if (status === "error") {
-      router.push("/(auth)/creation");
-      return;
-    }
+      if (fetchError) throw fetchError;
 
-    if (error) {
+      const { response, status } = data;
+      if (status === "error") {
+        router.push("/(auth)/creation");
+        return;
+      }
+
+      const profile = response[0] as Profile;
+
+      // Safely handle media
+      const media = (profile.media || []).map((url) => {
+        try {
+          const split = url.split("/");
+          const filename = split[split.length - 1];
+          const order = parseInt(filename.split(".")[0]) || 0;
+
+          return {
+            uri: url,
+            order: order,
+          };
+        } catch (error) {
+          console.error("Error processing media item:", error);
+          return {
+            uri: url,
+            order: 0,
+          };
+        }
+      });
+
+      const sortedMedia = media.sort((a, b) => a.order - b.order);
+
+      setProfileImages(sortedMedia);
+      setProfile(profile);
+
+      // Safely handle profile information
+      if (profile.information) {
+        const sortedInformation = Object.entries(profile.information)
+          .filter(([_, item]) => item !== null && item !== undefined)
+          .sort(
+            (a, b) => (b[1].priority_order || 0) - (a[1].priority_order || 0)
+          );
+        setProfileInformation(sortedInformation);
+      } else {
+        setProfileInformation([]);
+      }
+
+      setInterests(profile?.interests || []);
+      setAmenities(getSafeValue(profile?.information?.amenities, []));
+    } catch (error) {
       console.error("Error fetching profile:", error);
-      return;
+      setError("Failed to load profile");
+    } finally {
+      setLoading(false);
     }
-
-    const profile = response[0] as Profile;
-    const media = profile.media.map((url) => {
-      const split = url.split("/");
-      const filename = split[split.length - 1];
-      const order = parseInt(filename.split(".")[0]);
-
-      return {
-        uri: url,
-        order: order,
-      };
-    });
-
-    const sortedMedia = media.sort((a, b) => a.order - b.order);
-
-    setProfileImages(sortedMedia);
-    setProfile(profile);
-    setProfileInformation(
-      Object.entries(profile.information).sort(
-        (
-          a: [string, ProfileInformationItem],
-          b: [string, ProfileInformationItem]
-        ) => b[1].priority_order - a[1].priority_order
-      )
-    );
-
-    setInterests(profile?.interests || []);
-    setAmenities(profile?.information?.amenities?.value?.data?.value || []);
-
-    setLoading(false);
   };
 
   if (loading) {
     return <Loading title="Loading profile" />;
+  }
+
+  if (error) {
+    return (
+      <View
+        flex={1}
+        justifyContent="center"
+        alignItems="center"
+        bg="$background"
+        padding="$4"
+      >
+        <Text color="$red10" textAlign="center">
+          {error}
+        </Text>
+        <ListItem
+          pressTheme
+          onPress={fetchProfile}
+          title="Retry"
+          marginTop="$4"
+        />
+      </View>
+    );
   }
 
   return (
@@ -417,9 +502,10 @@ export default function ProfileScreen() {
                     <YGroup.Item>
                       <ListItem
                         title="Interests"
-                        subTitle={interests
-                          .map((i) => getInterestName(i))
-                          .join(", ")}
+                        subTitle={
+                          interests.map((i) => getInterestName(i)).join(", ") ||
+                          "None selected"
+                        }
                         pressTheme
                         iconAfter={ChevronRight}
                         onPress={() => {
@@ -456,9 +542,10 @@ export default function ProfileScreen() {
                     <YGroup.Item>
                       <ListItem
                         title="Amenities"
-                        subTitle={amenities
-                          .map((a) => getAmenityName(a))
-                          .join(", ")}
+                        subTitle={
+                          amenities.map((a) => getAmenityName(a)).join(", ") ||
+                          "None selected"
+                        }
                         pressTheme
                         iconAfter={ChevronRight}
                         onPress={() => {
@@ -495,7 +582,7 @@ export default function ProfileScreen() {
                     item && item.editable && key !== "amenities" ? (
                       <YGroup.Item key={index}>
                         <ListItem
-                          title={item.label}
+                          title={getSafeLabel(item)}
                           subTitle={formatProfileInformation(item)}
                           pressTheme
                           iconAfter={ChevronRight}
@@ -508,7 +595,7 @@ export default function ProfileScreen() {
                   <YGroup.Item>
                     <ListItem
                       title="Location"
-                      subTitle={locationLabel}
+                      subTitle={locationLabel || "Not set"}
                       pressTheme
                       iconAfter={ChevronRight}
                       onPress={() => {
