@@ -32,6 +32,8 @@ export const LocationPicker = ({
 }: LocationPickerProps) => {
   const theme = useTheme();
   const mapRef = useRef(null);
+  const isInitialMount = useRef(true);
+  const locationChangeTimeoutRef = useRef(null);
 
   const [center, setCenter] = useState(
     initialLocation || { latitude: 37.78825, longitude: -122.4324 }
@@ -39,13 +41,37 @@ export const LocationPicker = ({
 
   const [radius, setRadius] = useState(initialLocation?.range ?? 1000);
 
+  // This is the key fix - using a different pattern for onLocationChange
   useEffect(() => {
-    onLocationChange?.({
-      latitude: center.latitude,
-      longitude: center.longitude,
-      range: radius,
-    });
-  }, [radius, center, onLocationChange]);
+    // Skip on first render
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    // Clear any existing timeout
+    if (locationChangeTimeoutRef.current) {
+      clearTimeout(locationChangeTimeoutRef.current);
+    }
+
+    // Set a timeout to call onLocationChange
+    locationChangeTimeoutRef.current = setTimeout(() => {
+      if (onLocationChange) {
+        onLocationChange({
+          latitude: center.latitude,
+          longitude: center.longitude,
+          range: radius,
+        });
+      }
+    }, 300); // Debounce for 300ms
+
+    // Cleanup function to clear timeout if component unmounts or dependencies change
+    return () => {
+      if (locationChangeTimeoutRef.current) {
+        clearTimeout(locationChangeTimeoutRef.current);
+      }
+    };
+  }, [radius, center]); // Remove onLocationChange from dependencies
 
   const handleRegionChange = useCallback(
     debounce((region) => {
@@ -88,6 +114,19 @@ export const LocationPicker = ({
     }
   };
 
+  // Callback for manual save
+  const handleSave = useCallback(() => {
+    if (onSave) {
+      onSave();
+    } else if (onLocationChange) {
+      onLocationChange({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        range: radius,
+      });
+    }
+  }, [center, radius, onSave, onLocationChange]);
+
   return (
     <View gap="$4">
       <Text fontSize={"$6"} fontWeight="bold">
@@ -110,13 +149,6 @@ export const LocationPicker = ({
             longitudeDelta: 0.0421,
           }}
           onRegionChange={handleRegionChange}
-          onTouchEnd={() => {
-            onLocationChange?.({
-              latitude: center.latitude,
-              longitude: center.longitude,
-              range: radius,
-            });
-          }}
         >
           {initialLocation?.range ? (
             <Circle
@@ -170,7 +202,7 @@ export const LocationPicker = ({
       )}
 
       {showSaveButton && (
-        <Button pressTheme onPress={onSave}>
+        <Button pressTheme onPress={handleSave}>
           {saveButtonText}
         </Button>
       )}

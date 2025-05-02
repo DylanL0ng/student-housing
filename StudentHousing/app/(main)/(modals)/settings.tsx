@@ -16,6 +16,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { Header } from "@react-navigation/elements/src/Header/Header";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useViewMode } from "@/providers/ViewModeProvider";
+import { useProfile } from "@/providers/ProfileProvider";
 
 const SettingsPage = () => {
   const { viewMode, setViewMode } = useViewMode();
@@ -23,6 +24,8 @@ const SettingsPage = () => {
   const [viewModeBool, setViewModeBool] = useState(
     viewMode === "accommodation"
   );
+
+  const { activeProfileId } = useProfile();
 
   const onPress = async () => {
     setViewModeBool(!viewModeBool);
@@ -48,7 +51,13 @@ const SettingsPage = () => {
             <YGroup.Item key={1}>
               <Button
                 pressTheme
-                onPress={() => {
+                onPress={async () => {
+                  await supabase
+                    .from("profile_mapping")
+                    .update({
+                      created: false,
+                    })
+                    .eq("id", activeProfileId);
                   router.replace("/(auth)/creation");
                 }}
               >
